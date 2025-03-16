@@ -18,9 +18,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+
   final _authService = AuthService();
   int _currentIndex = 0;
-
+  String _getGreetingMessage() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good morning!';
+    } else if (hour < 17) {
+      return 'Good afternoon!';
+    } else {
+      return 'Good evening!';
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -37,12 +47,24 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        title: Text(
-          'Mingle',
-          style: TextStyle(
-            color: Theme.of(context).primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mingle',
+              style: TextStyle(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              _getGreetingMessage(),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -58,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ],
+
       ),
       body: _buildCurrentScreen(),
       bottomNavigationBar: Container(
@@ -70,93 +93,81 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          selectedItemColor: Theme.of(context).primaryColor,
-          unselectedItemColor: Colors.grey,
-          showUnselectedLabels: true,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore),
-              label: 'Discover',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline),
-              activeIcon: Icon(Icons.people),
-              label: 'Friends',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline),
-              activeIcon: Icon(Icons.chat_bubble),
-              label: 'Messages',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: BottomNavigationBar(
+            elevation: 0,
+            backgroundColor: Colors.white,
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Colors.grey,
+            showUnselectedLabels: true,
+            items: [
+              _buildNavItem(Icons.explore_outlined, Icons.explore, 'Discover', 0),
+              _buildNavItem(Icons.people_outline, Icons.people, 'Friends', 1),
+              _buildNavItem(Icons.chat_bubble_outline, Icons.chat_bubble, 'Messages', 2),
+              _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 3),
+            ],
+          ),
         ),
       ),
+
+    );
+  }
+  BottomNavigationBarItem _buildNavItem(IconData icon, IconData activeIcon, String label, int index) {
+    return BottomNavigationBarItem(
+      icon: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _currentIndex == index ? Theme.of(context).primaryColor.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon),
+      ),
+      activeIcon: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(activeIcon),
+      ),
+      label: label,
+    );
+  }
+  Widget _buildCurrentScreen() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: _getScreen(),
     );
   }
 
-  Widget _buildCurrentScreen() {
+  Widget _getScreen() {
     switch (_currentIndex) {
       case 0:
-        return const DiscoverTab();
+        return const DiscoverTab(key: ValueKey('discover'));
       case 1:
-        return const FriendsTab();
+        return const FriendsTab(key: ValueKey('friends'));
       case 2:
-        return const MessagesTab();
+        return const MessagesTab(key: ValueKey('messages'));
       case 3:
-        return const ProfileTab();
+        return const ProfileTab(key: ValueKey('profile'));
       default:
-        return const DiscoverTab();
+        return const DiscoverTab(key: ValueKey('discover'));
     }
   }
+
 }
 
 class DiscoverTab extends StatelessWidget {
   const DiscoverTab({super.key});
 
-  void _navigateToChat(BuildContext context, UserModel otherUser) async {
-    final authService = AuthService();
-    final currentUser = authService.currentUser;
-    if (currentUser == null) return;
-
-    // Create or get existing chat document
-    final chatId = [currentUser.uid, otherUser.uid]..sort();
-    final chatDocRef =
-        FirebaseFirestore.instance.collection('chats').doc(chatId.join('_'));
-
-    final chatDoc = await chatDocRef.get();
-    if (!chatDoc.exists) {
-      await chatDocRef.set({
-        'participants': chatId,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessage': '',
-        'unreadCount${currentUser.uid}': 0,
-        'unreadCount${otherUser.uid}': 0,
-        '${currentUser.uid}_typing': false,
-        '${otherUser.uid}_typing': false,
-      });
-    }
-
-    if (context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChatScreen(
-            otherUser: otherUser,
-            chatId: chatDocRef.id,
-          ),
-        ),
-      );
-    }
-  }
 
   Future<void> _sendFriendRequest(
       BuildContext context, String currentUserId, UserModel otherUser) async {
@@ -361,13 +372,8 @@ class DiscoverTab extends StatelessWidget {
               itemCount: allUsers.length,
               itemBuilder: (context, index) {
                 final user = allUsers[index];
-                return Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                return AnimatedCard(
+                  user: user,
                     onTap: () {
                       showModalBottomSheet(
                         context: context,
@@ -505,144 +511,212 @@ class DiscoverTab extends StatelessWidget {
                           ),
                         ),
                       );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Theme.of(context).primaryColor.withOpacity(0.05),
-                            Colors.white,
-                          ],
-                        ),
-                      ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Profile image
-                                Hero(
-                                  tag: 'profile-${user.uid}',
-                                  child: CircleAvatar(
-                                    radius: 40,
-                                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                    backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
-                                        ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                                        : null,
-                                    child: user.photoUrl == null
-                                        ? Text(
-                                      user.name[0].toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    )
-                                        : null,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-
-                                // User name
-                                Text(
-                                  user.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 4),
-
-                                // Profession
-                                Text(
-                                  user.profession,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                // Industry (if available)
-                                if (user.industry != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    user.industry!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500],
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-
-                                // Spacer is removed as it can cause layout issues in constrained spaces
-                                const SizedBox(height: 12),
-
-                                // Weekend interests
-                                if (user.weekendInterests.isNotEmpty)
-                                  Text(
-                                    user.weekendInterests.first,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.purple[700],
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                  ),
-
-                                // Open to networking indicator
-                                if (user.openToNetworking)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.handshake_outlined,
-                                          size: 16,
-                                          color: Colors.green[600],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Open to connect',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.green[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
+                    },);
               },
             );
           },
         );
       },
+    );
+  }
+}
+
+class AnimatedCard extends StatefulWidget {
+  final UserModel user;
+  final VoidCallback onTap;
+
+  const AnimatedCard({
+    Key? key,
+    required this.user,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  State<AnimatedCard> createState() => _AnimatedCardState();
+}
+
+class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.user;
+    return GestureDetector(
+      onTapDown: (_) {
+        _controller.forward();
+        setState(() => _isHovered = true);
+      },
+      onTapUp: (_) {
+        _controller.reverse();
+        setState(() => _isHovered = false);
+        widget.onTap();
+      },
+      onTapCancel: () {
+        _controller.reverse();
+        setState(() => _isHovered = false);
+      },
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Card(
+          elevation: _isHovered ? 8 : 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).primaryColor.withOpacity(0.05),
+                  Colors.white,
+                ],
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Profile image
+                      Hero(
+                        tag: 'profile-${user.uid}',
+                        child: CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                              ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
+                              : null,
+                          child: user.photoUrl == null
+                              ? Text(
+                            user.name[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          )
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // User name
+                      Text(
+                        user.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Profession
+                      Text(
+                        user.profession,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+
+                      // Industry (if available)
+                      if (user.industry != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          user.industry!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+
+                      // Spacer is removed as it can cause layout issues in constrained spaces
+                      const SizedBox(height: 12),
+
+                      // Weekend interests
+                      if (user.weekendInterests.isNotEmpty)
+                        Text(
+                          user.weekendInterests.first,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.purple[700],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+
+                      // Open to networking indicator
+                      if (user.openToNetworking)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.handshake_outlined,
+                                size: 16,
+                                color: Colors.green[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Open to connect',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
