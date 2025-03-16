@@ -3,13 +3,19 @@ import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:cloudinary_public/cloudinary_public.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class CloudinaryService {
-  final cloudinary = CloudinaryPublic(
+  static final CloudinaryService _instance = CloudinaryService._internal();
+  factory CloudinaryService() => _instance;
+  CloudinaryService._internal();
+
+  final _cloudinary = CloudinaryPublic(
     'dpgrnxjay',  // Your Cloudinary cloud name
     'Weekend Minlge',  // Your upload preset
-    cache: false,
   );
+
+  final _cacheManager = DefaultCacheManager();
 
   // Replace these with your Cloudinary credentials
   static const String cloudName = 'dpgrnxjay';
@@ -55,31 +61,42 @@ class CloudinaryService {
 
   Future<String> uploadProfileImage(String userId, File imageFile) async {
     try {
-      // Create a unique file name
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final publicId = 'mingle/profiles/$userId/$timestamp';
-
-      // Upload to Cloudinary
-      final response = await cloudinary.uploadFile(
+      final response = await _cloudinary.uploadFile(
         CloudinaryFile.fromFile(
           imageFile.path,
-          publicId: publicId,
-          folder: 'mingle/profiles',
-          resourceType: CloudinaryResourceType.Image,
+          folder: 'profile_images',
+          publicId: userId,
         ),
       );
 
-      // Apply transformations using the getOptimizedImageUrl method
-      final optimizedUrl = getOptimizedImageUrl(
-        response.secureUrl,
-        width: 400,
-        height: 400,
-        transformation: 'c_fill,g_face,e_auto_contrast,e_auto_color,e_improve,q_90',
-      );
+      // Cache the image URL
+      await _cacheManager.downloadFile(response.secureUrl);
 
-      return optimizedUrl;
+      return response.secureUrl;
     } catch (e) {
-      throw Exception('Error uploading image to Cloudinary: $e');
+      print('Error uploading image to Cloudinary: $e');
+      rethrow;
+    }
+  }
+
+  Future<String?> getCachedImageUrl(String imageUrl) async {
+    try {
+      final fileInfo = await _cacheManager.getFileFromCache(imageUrl);
+      if (fileInfo != null) {
+        return fileInfo.file.path;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting cached image: $e');
+      return null;
+    }
+  }
+
+  Future<void> clearImageCache() async {
+    try {
+      await _cacheManager.emptyCache();
+    } catch (e) {
+      print('Error clearing image cache: $e');
     }
   }
 

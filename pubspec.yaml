@@ -18,6 +18,8 @@ dependencies:
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.5
   cloudinary_public: ^0.23.1
+  percent_indicator: ^4.2.4
+  flutter_cache_manager: ^3.4.1
   google_sign_in: ^6.1.6
   provider: ^6.1.1
   shared_preferences: ^2.2.2
@@ -31,6 +33,8 @@ dependencies:
   firebase_messaging: ^15.2.4
   flutter_local_notifications: ^18.0.1
   geocoding: ^3.0.0
+
+
 
   # File & Image Handling
   path: ^1.8.3
