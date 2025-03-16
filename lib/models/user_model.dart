@@ -21,6 +21,10 @@ class UserModel {
   final List<String> friends;
   final List<String> pendingFriendRequests;
   final List<String> sentFriendRequests;
+  final String? linkedin;
+  final String? github;
+  final String? twitter;
+  final Map<String, String>? personalityAnswers;
 
   UserModel({
     required this.uid,
@@ -43,6 +47,10 @@ class UserModel {
     List<String>? friends,
     List<String>? pendingFriendRequests,
     List<String>? sentFriendRequests,
+    this.linkedin,
+    this.github,
+    this.twitter,
+    this.personalityAnswers,
   }) : interests = interests ?? [],
         weekendInterests = weekendInterests ?? [],
         skills = skills ?? [],
@@ -86,7 +94,73 @@ class UserModel {
       friends: List<String>.from(data['friends'] ?? []),
       pendingFriendRequests: List<String>.from(data['pendingFriendRequests'] ?? []),
       sentFriendRequests: List<String>.from(data['sentFriendRequests'] ?? []),
+      linkedin: data['linkedin'],
+      github: data['github'],
+      twitter: data['twitter'],
+      personalityAnswers: data['personalityAnswers'] != null
+          ? Map<String, String>.from(data['personalityAnswers'])
+          : null,
     );
+  }
+
+  factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
+    return UserModel(
+      uid: uid,
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      profession: data['profession'] ?? '',
+      photoUrl: data['photoUrl'],
+      bio: data['bio'],
+      interests: List<String>.from(data['interests'] ?? []),
+      location: data['location'],
+      company: data['company'],
+      locationName: data['locationName'],
+      lastActive: data['lastActive'] != null ? DateTime.parse(data['lastActive']) : null,
+      createdAt: DateTime.parse(data['createdAt']),
+      weekendInterests: List<String>.from(data['weekendInterests'] ?? []),
+      availability: Map<String, bool>.from(data['availability'] ?? {}),
+      industry: data['industry'],
+      skills: List<String>.from(data['skills'] ?? []),
+      openToNetworking: data['openToNetworking'] ?? true,
+      friends: List<String>.from(data['friends'] ?? []),
+      pendingFriendRequests: List<String>.from(data['pendingFriendRequests'] ?? []),
+      sentFriendRequests: List<String>.from(data['sentFriendRequests'] ?? []),
+      linkedin: data['linkedin'],
+      github: data['github'],
+      twitter: data['twitter'],
+      personalityAnswers: data['personalityAnswers'] != null
+          ? Map<String, String>.from(data['personalityAnswers'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'name': name,
+      'email': email,
+      'profession': profession,
+      'photoUrl': photoUrl,
+      'bio': bio,
+      'interests': interests,
+      'location': location,
+      'company': company,
+      'locationName': locationName,
+      'lastActive': lastActive?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'weekendInterests': weekendInterests,
+      'availability': availability,
+      'industry': industry,
+      'skills': skills,
+      'openToNetworking': openToNetworking,
+      'friends': friends,
+      'pendingFriendRequests': pendingFriendRequests,
+      'sentFriendRequests': sentFriendRequests,
+      'linkedin': linkedin,
+      'github': github,
+      'twitter': twitter,
+      'personalityAnswers': personalityAnswers,
+    };
   }
 
   Map<String, dynamic> toFirestore() {
@@ -110,6 +184,10 @@ class UserModel {
       'friends': friends,
       'pendingFriendRequests': pendingFriendRequests,
       'sentFriendRequests': sentFriendRequests,
+      'linkedin': linkedin,
+      'github': github,
+      'twitter': twitter,
+      'personalityAnswers': personalityAnswers,
     };
   }
 
@@ -130,6 +208,10 @@ class UserModel {
     List<String>? friends,
     List<String>? pendingFriendRequests,
     List<String>? sentFriendRequests,
+    String? linkedin,
+    String? github,
+    String? twitter,
+    Map<String, String>? personalityAnswers,
   }) {
     return UserModel(
       uid: uid,
@@ -152,6 +234,10 @@ class UserModel {
       friends: friends ?? this.friends,
       pendingFriendRequests: pendingFriendRequests ?? this.pendingFriendRequests,
       sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
+      linkedin: linkedin ?? this.linkedin,
+      github: github ?? this.github,
+      twitter: twitter ?? this.twitter,
+      personalityAnswers: personalityAnswers ?? this.personalityAnswers,
     );
   }
 }
