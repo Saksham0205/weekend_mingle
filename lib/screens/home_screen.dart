@@ -44,7 +44,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _requestPermissions() async {
     await PermissionService.checkAndRequestAllPermissions(context);
   }
-
+  Future<void> _sendFriendRequest(
+      BuildContext context, String currentUserId, UserModel otherUser) async {
+    final friendService = FriendService();
+    try {
+      await friendService.sendFriendRequest(currentUserId, otherUser.uid);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Friend request sent to ${otherUser.name}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending friend request: $e')),
+        );
+      }
+    }
+  }
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -179,119 +196,438 @@ class _HomeScreenState extends State<HomeScreen> {
             final userProvider = Provider.of<UserProvider>(context, listen: false);
             feedProvider.initializeFeed(userProvider.user?.uid);
           },
-          child: ListView.builder(
-            itemCount: feedProvider.posts.length + 2, // +2 for stories and group invites
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _buildStoryBar();
-              }
-              if (index == 1) {
-                return _buildGroupInvites();
-              }
-              final post = feedProvider.posts[index - 2];
-              return _buildPostCard(post);
-            },
+          child: ListView(
+            children: [
+              _buildUsersSection(),
+              _buildWeekendPlansSection(),
+
+              ...feedProvider.posts.map((post) => _buildPostCard(post)).toList(),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildStoryBar() {
-    return Container(
-      height: 100,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: 10, // Replace with actual story count
-        itemBuilder: (context, index) {
-          return Container(
-            width: 70,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Theme.of(context).primaryColor, Colors.purple],
-              ),
-              borderRadius: BorderRadius.circular(35),
-            ),
-            padding: const EdgeInsets.all(2),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Theme.of(context).primaryColor),
+  Widget _buildUsersSection() {
+    final currentUser = Provider.of<UserProvider>(context).user;
+    if (currentUser == null) {
+      print('Current user is null');
+      return const SizedBox.shrink();
+    }
+
+    print('Current user ID: ${currentUser.uid}');
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .where(FieldPath.documentId, isNotEqualTo: currentUser.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('Error fetching users: ${snapshot.error}');
+          print('Error stack trace: ${snapshot.stackTrace}');
+          return const SizedBox.shrink();
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          print('Waiting for user data...');
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
             ),
           );
-        },
-      ),
+        }
+
+        print('Number of documents found: ${snapshot.data?.docs.length ?? 0}');
+
+        final users = snapshot.data?.docs
+            .map((doc) {
+          try {
+            print('Processing document ID: ${doc.id}');
+            print('Document data: ${doc.data()}');
+            return UserModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>, null);
+          } catch (e) {
+            print('Error parsing user data for document ${doc.id}: $e');
+            print('Document data: ${doc.data()}');
+            return null;
+          }
+        })
+            .where((user) => user != null)
+            .toList() ??
+            [];
+
+        print('Number of valid users parsed: ${users.length}');
+
+        if (users.isEmpty) {
+          print('No users found after parsing');
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.people_outline,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No users found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try again later to find people to connect with',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        print('Building user list with ${users.length} users');
+        return Container(
+          margin: const EdgeInsets.only(top: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'People to Connect',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _currentIndex = 3); // Switch to explore tab
+                      },
+                      child: const Text('See All'),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 180,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: users.length,
+                  itemBuilder: (context, index) => _buildUserCard(users[index]!),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildGroupInvites() {
+  Widget _buildUserCard(UserModel user) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      width: 160,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: InkWell(
+          onTap: () => _showUserBottomSheet(user),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).primaryColor.withOpacity(0.05),
+                  Colors.white,
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  'Weekend Plans',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                CircleAvatar(
+                  radius: 35,
+                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty && Uri.tryParse(user.photoUrl!)?.hasAbsolutePath == true
+                      ? CachedNetworkImageProvider(user.photoUrl!)
+                      : null,
+                  child: (user.photoUrl == null || user.photoUrl!.isEmpty || Uri.tryParse(user.photoUrl!)?.hasAbsolutePath != true)
+                      ? Text(
+                    user.name[0].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  )
+                      : null,
                 ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GroupsEventsScreen(),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(
+                    children: [
+                      Text(
+                        user.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
-                    );
-                  },
-                  child: const Text('See All'),
+                      const SizedBox(height: 4),
+                      Text(
+                        user.profession,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      if (user.company != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          user.company!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.all(8),
-                  child: Container(
-                    width: 200,
-                    padding: const EdgeInsets.all(8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeekendPlansSection() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('weekend_activities')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final activities = snapshot.data?.docs ?? [];
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Weekend Plans',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GroupsEventsScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('See All'),
+                    ),
+                  ],
+                ),
+              ),
+              if (activities.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Weekend Activity ${index + 1}',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 48,
+                          color: Colors.grey[400],
                         ),
-                        const Text('Join us for a weekend adventure!'),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: () {},
-                          child: const Text('Join'),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No weekend plans yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Create a new plan and connect with others!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            _showCreateWeekendPlanDialog();
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create Plan'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                );
-              },
-            ),
+                )
+              else
+                SizedBox(
+                  height: 220,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    itemCount: activities.length,
+                    itemBuilder: (context, index) {
+                      final activity = activities[index].data() as Map<String, dynamic>;
+                      return Container(
+                        width: 280,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              // Show activity details
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(16),
+                                    ),
+                                    image: activity['imageUrl'] != null
+                                        ? DecorationImage(
+                                      image: CachedNetworkImageProvider(
+                                        activity['imageUrl'],
+                                      ),
+                                      fit: BoxFit.cover,
+                                    )
+                                        : null,
+                                    gradient: activity['imageUrl'] == null
+                                        ? LinearGradient(
+                                      colors: [
+                                        Theme.of(context).primaryColor,
+                                        Theme.of(context)
+                                            .primaryColor
+                                            .withOpacity(0.7),
+                                      ],
+                                    )
+                                        : null,
+                                  ),
+                                  child: activity['imageUrl'] == null
+                                      ? Center(
+                                    child: Icon(
+                                      Icons.event,
+                                      size: 48,
+                                      color: Colors.white.withOpacity(0.8),
+                                    ),
+                                  )
+                                      : null,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        activity['title'] ?? 'Weekend Activity',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        activity['description'] ?? '',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+
 
   Widget _buildPostCard(Post post) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -460,9 +796,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
-        onPressed: () {
-          // Show create post dialog
-        },
+        onPressed: _showCreateWeekendPlanDialog,
         child: const Icon(Icons.add),
       )
           : null,
@@ -510,363 +844,499 @@ class _HomeScreenState extends State<HomeScreen> {
         return _buildMainFeed();
     }
   }
-}
 
-class DiscoverTab extends StatelessWidget {
-  const DiscoverTab({super.key});
-
-
-  Future<void> _sendFriendRequest(
-      BuildContext context, String currentUserId, UserModel otherUser) async {
-    final friendService = FriendService();
-    try {
-      await friendService.sendFriendRequest(currentUserId, otherUser.uid);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Friend request sent to ${otherUser.name}')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending friend request: $e')),
-        );
-      }
-    }
-  }
-
-  Widget _buildAvailabilityChips(Map<String, bool> availability) {
-    final availableTimes = availability.entries
-        .where((entry) => entry.value)
-        .map((entry) => entry.key
-        .split('_')
-        .map(
-          (word) => word[0].toUpperCase() + word.substring(1),
-    )
-        .join(' '))
-        .toList();
-
-    if (availableTimes.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      children: availableTimes.map((time) {
-        return Chip(
-          label: Text(
-            time,
-            style: const TextStyle(fontSize: 12),
+  void _showUserBottomSheet(UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          backgroundColor: Colors.green.withOpacity(0.1),
-          side: const BorderSide(color: Colors.green, width: 0.5),
-          labelStyle: const TextStyle(color: Colors.green),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildSkillsSection(List<String> skills) {
-    if (skills.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Professional Skills',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: skills.map((skill) {
-            return Chip(
-              label: Text(
-                skill,
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor: Colors.blue.withOpacity(0.1),
-              side: const BorderSide(color: Colors.blue, width: 0.5),
-              labelStyle: const TextStyle(color: Colors.blue),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWeekendInterests(List<String> interests) {
-    if (interests.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Weekend Activities',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: interests.map((interest) {
-            return Chip(
-              label: Text(
-                interest,
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor: Colors.purple.withOpacity(0.1),
-              side: const BorderSide(color: Colors.purple, width: 0.5),
-              labelStyle: const TextStyle(color: Colors.purple),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authService = AuthService();
-    final currentUser = authService.currentUser;
-    if (currentUser == null) return const Center(child: Text('Not logged in'));
-
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .snapshots(),
-      builder: (context, userSnapshot) {
-        if (!userSnapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final currentUserData = UserModel.fromFirestore(userSnapshot.data!, null);
-
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .where(FieldPath.documentId, isNotEqualTo: currentUser.uid)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                controller: controller,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error: ${snapshot.error}',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final allUsers = snapshot.data!.docs
-                .map((doc) => UserModel.fromFirestore(doc, null))
-                .where((user) =>
-            !currentUserData.friends.contains(user.uid) &&
-                !currentUserData.pendingFriendRequests.contains(user.uid) &&
-                !currentUserData.sentFriendRequests.contains(user.uid))
-                .toList();
-
-            if (allUsers.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.people_outline,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No new people to discover',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              itemCount: allUsers.length,
-              itemBuilder: (context, index) {
-                final user = allUsers[index];
-                return AnimatedCard(
-                  user: user,
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => DraggableScrollableSheet(
-                        initialChildSize: 0.8,
-                        maxChildSize: 0.9,
-                        minChildSize: 0.5,
-                        builder: (context, scrollController) => Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.vertical(
+                    Stack(
+                      children: [
+                        Container(
+                          height: 200,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Theme.of(context).primaryColor,
+                                Theme.of(context).primaryColor.withOpacity(0.8),
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(20),
                             ),
                           ),
-                          child: SingleChildScrollView(
-                            controller: scrollController,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Stack(
+                          child: user.photoUrl != null && user.photoUrl!.isNotEmpty && Uri.tryParse(user.photoUrl!)?.hasAbsolutePath == true
+                              ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: user.photoUrl!,
+                              fit: BoxFit.cover,
+                              errorWidget: (context, url, error) => Center(
+                                child: Text(
+                                  user.name[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 72,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                              : Center(
+                            child: Text(
+                              user.name[0].toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 72,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),),
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            Theme.of(context).primaryColor.withOpacity(0.8),
-                                            Colors.white,
-                                          ],
-                                        ),
-                                        borderRadius: const BorderRadius.vertical(
-                                          top: Radius.circular(20),
-                                        ),
+                                    Text(
+                                      user.name,
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    Positioned.fill(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Hero(
-                                            tag: 'profile-${user.uid}',
-                                            child: CircleAvatar(
-                                              radius: 50,
-                                              backgroundColor: Colors.white,
-                                              child: CircleAvatar(
-                                                radius: 48,
-                                                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                                backgroundImage: user.photoUrl != null
-                                                    ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                                                    : null,
-                                                child: user.photoUrl == null
-                                                    ? Text(
-                                                  user.name[0].toUpperCase(),
-                                                  style: TextStyle(
-                                                    fontSize: 36,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Theme.of(context).primaryColor,
-                                                  ),
-                                                )
-                                                    : null,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            user.name,
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      user.profession,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
                                       ),
                                     ),
+                                    if (user.company != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        user.company!,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          ElevatedButton.icon(
-                                            icon: const Icon(Icons.person_add),
-                                            label: const Text('Add Friend'),
-                                            onPressed: () {
-                                              _sendFriendRequest(context, currentUser.uid, user);
-                                              Navigator.pop(context);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 24),
-                                      if (user.bio != null && user.bio!.isNotEmpty) ...[
-                                        const Text(
-                                          'About',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(user.bio!),
-                                        const SizedBox(height: 24),
-                                      ],
-                                      if (user.skills.isNotEmpty)
-                                        _buildSkillsSection(user.skills),
-                                      if (user.weekendInterests.isNotEmpty) ...[
-                                        const SizedBox(height: 24),
-                                        _buildWeekendInterests(user.weekendInterests),
-                                      ],
-                                      const SizedBox(height: 24),
-                                      const Text(
-                                        'Available Times',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      _buildAvailabilityChips(user.availability),
-                                    ],
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  // Handle connect action
+                                },
+                                icon: const Icon(Icons.person_add),
+                                label: const Text('Connect'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (user.locationName != null) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on,
+                                    size: 20, color: Colors.grey[600]),
+                                const SizedBox(width: 8),
+                                Text(
+                                  user.locationName!,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
                                   ),
                                 ),
                               ],
                             ),
+                          ],
+                          if (user.bio != null && user.bio!.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            const Text(
+                              'About',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              user.bio!,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                          if (user.skills.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Professional Skills',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: user.skills.map((skill) {
+                                return Chip(
+                                  label: Text(skill),
+                                  backgroundColor:
+                                  Theme.of(context).primaryColor.withOpacity(0.1),
+                                  labelStyle: TextStyle(
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                          if (user.weekendInterests.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Weekend Interests',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: user.weekendInterests.map((interest) {
+                                return Chip(
+                                  label: Text(interest),
+                                  backgroundColor: Colors.purple.withOpacity(0.1),
+                                  labelStyle: const TextStyle(
+                                    color: Colors.purple,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Availability',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: user.availability.entries
+                                .where((entry) => entry.value)
+                                .map((entry) {
+                              final time = entry.key.split('_').map(
+                                    (word) =>
+                                word[0].toUpperCase() + word.substring(1),
+                              ).join(' ');
+                              return Chip(
+                                label: Text(time),
+                                backgroundColor: Colors.green.withOpacity(0.1),
+                                labelStyle: const TextStyle(
+                                  color: Colors.green,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          if (user.linkedin != null ||
+                              user.github != null ||
+                              user.twitter != null) ...[
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Social Links',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                if (user.linkedin != null)
+                                  IconButton(
+                                    icon: const Icon(Icons.link),
+                                    onPressed: () {
+                                      // Handle LinkedIn link
+                                    },
+                                    tooltip: 'LinkedIn',
+                                  ),
+                                if (user.github != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 16),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.code),
+                                      onPressed: () {
+                                        // Handle GitHub link
+                                      },
+                                      tooltip: 'GitHub',
+                                    ),
+                                  ),
+                                if (user.twitter != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 16),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.chat),
+                                      onPressed: () {
+                                        // Handle Twitter link
+                                      },
+                                      tooltip: 'Twitter',
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
-                    );
-                  },);
-              },
-            );
-          },
-        );
-      },
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 150,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCreateWeekendPlanDialog() {
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final dateController = TextEditingController();
+    final locationController = TextEditingController();
+    DateTime? selectedDate;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Create Weekend Plan',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a title';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a description';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: dateController,
+                    decoration: const InputDecoration(
+                      labelText: 'Date',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    readOnly: true,
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          selectedDate = picked;
+                          dateController.text =
+                          '${picked.day}/${picked.month}/${picked.year}';
+                        });
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a date';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: locationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Location',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.location_on),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a location';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (formKey.currentState!.validate() && selectedDate != null) {
+                        final currentUser = Provider.of<UserProvider>(context, listen: false).user;
+                        if (currentUser == null) return;
+
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('weekend_activities')
+                              .add({
+                            'title': titleController.text,
+                            'description': descriptionController.text,
+                            'date': Timestamp.fromDate(selectedDate!),
+                            'location': locationController.text,
+                            'createdBy': currentUser.uid,
+                            'createdAt': Timestamp.now(),
+                            'participants': [currentUser.uid],
+                            'maxParticipants': 10,
+                          });
+
+                          if (mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Weekend plan created successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error creating weekend plan: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Create Plan'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
+
+
 
 class AnimatedCard extends StatefulWidget {
   final UserModel user;
