@@ -6,6 +6,8 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/feed_provider.dart';
+import 'providers/notification_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
@@ -25,7 +27,8 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        // Add other providers here
+        ChangeNotifierProvider(create: (_) => FeedProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -37,6 +40,23 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.light,
           ),
           useMaterial3: true,
+          appBarTheme: const AppBarTheme(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            iconTheme: IconThemeData(color: Colors.black),
+            titleTextStyle: TextStyle(
+              color: Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+            selectedItemColor: Colors.blue,
+            unselectedItemColor: Colors.grey,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
+          ),
         ),
         initialRoute: '/',
         routes: {
@@ -59,48 +79,37 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeUser();
-    });
-  }
-
-  Future<void> _initializeUser() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.initializeUser();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, child) {
-        if (userProvider.isLoading) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        return StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
+        if (!snapshot.hasData) {
+          // Clear providers when user logs out
+          Provider.of<FeedProvider>(context, listen: false).initializeFeed(null);
+          Provider.of<NotificationProvider>(context, listen: false).initializeNotifications(null);
+          return const LoginScreen();
+        }
 
-            if (snapshot.hasData) {
-              return const HomeScreen();
+        // Initialize user data when auth state changes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          userProvider.initializeUser().then((_) {
+            if (userProvider.user != null) {
+              Provider.of<FeedProvider>(context, listen: false)
+                  .initializeFeed(userProvider.user!.uid);
+              Provider.of<NotificationProvider>(context, listen: false)
+                  .initializeNotifications(userProvider.user!.uid);
             }
+          });
+        });
 
-            return const LoginScreen();
-          },
-        );
+        return const HomeScreen();
       },
     );
   }
