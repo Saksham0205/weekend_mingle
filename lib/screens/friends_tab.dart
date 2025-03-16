@@ -805,6 +805,7 @@ class _FriendsTabState extends State<FriendsTab> with SingleTickerProviderStateM
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                   child: ListTile(
+                    onTap: () => _showRequestSenderProfile(context, sender, request),
                     leading: CircleAvatar(
                       radius: 24,
                       backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
@@ -823,7 +824,20 @@ class _FriendsTabState extends State<FriendsTab> with SingleTickerProviderStateM
                           : null,
                     ),
                     title: Text(sender.name),
-                    subtitle: Text(sender.profession),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(sender.profession),
+                        Text(
+                          'Tap to view profile',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -854,6 +868,325 @@ class _FriendsTabState extends State<FriendsTab> with SingleTickerProviderStateM
           },
         );
       },
+    );
+  }
+
+  void _showRequestSenderProfile(BuildContext context, UserModel sender, FriendRequestModel request) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+          ),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Stack(
+                      children: [
+                        Container(
+                          height: 250,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Theme.of(context).primaryColor,
+                                Theme.of(context).primaryColor.withOpacity(0.8),
+                                Colors.white,
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 60,
+                                  backgroundColor: Colors.white,
+                                  child: CircleAvatar(
+                                    radius: 58,
+                                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    backgroundImage: sender.photoUrl != null
+                                        ? CachedNetworkImageProvider(sender.photoUrl!) as ImageProvider
+                                        : null,
+                                    child: sender.photoUrl == null
+                                        ? Text(
+                                      sender.name[0].toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).primaryColor,
+                                      ),
+                                    )
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                sender.name,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              if (sender.profession.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    sender.profession,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: IconButton(
+                            icon: const Icon(Icons.close),
+                            color: Colors.white,
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Friend request actions banner
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 24),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${sender.name} wants to connect with you',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      icon: const Icon(Icons.check),
+                                      label: const Text('Accept'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        final currentUser = _authService.currentUser;
+                                        if (currentUser != null) {
+                                          _friendService.acceptFriendRequest(
+                                            request.id,
+                                            currentUser.uid,
+                                            sender.uid,
+                                          );
+                                        }
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                    ElevatedButton.icon(
+                                      icon: const Icon(Icons.close),
+                                      label: const Text('Decline'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        final currentUser = _authService.currentUser;
+                                        if (currentUser != null) {
+                                          _friendService.rejectFriendRequest(
+                                            request.id,
+                                            currentUser.uid,
+                                            sender.uid,
+                                          );
+                                        }
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (sender.bio != null && sender.bio!.isNotEmpty) ...[
+                            _buildSectionTitle('About'),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Text(sender.bio!),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          if (sender.company != null || sender.industry != null) ...[
+                            _buildSectionTitle('Professional Info'),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue[100]!),
+                              ),
+                              child: Column(
+                                children: [
+                                  if (sender.company != null)
+                                    ListTile(
+                                      leading: const Icon(Icons.business, color: Colors.blue),
+                                      title: Text(sender.company!),
+                                      dense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  if (sender.industry != null)
+                                    ListTile(
+                                      leading: const Icon(Icons.work, color: Colors.blue),
+                                      title: Text(sender.industry!),
+                                      dense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          if (sender.locationName != null) ...[
+                            _buildSectionTitle('Location'),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green[100]!),
+                              ),
+                              child: ListTile(
+                                leading: const Icon(Icons.location_on, color: Colors.green),
+                                title: Text(sender.locationName!),
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          if (sender.skills.isNotEmpty) ...[
+                            _buildSectionTitle('Professional Skills'),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.purple[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.purple[100]!),
+                              ),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: sender.skills.map((skill) {
+                                  return Chip(
+                                    label: Text(
+                                      skill,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    backgroundColor: Colors.purple.withOpacity(0.1),
+                                    side: const BorderSide(color: Colors.purple, width: 0.5),
+                                    labelStyle: const TextStyle(color: Colors.purple),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          if (sender.weekendInterests.isNotEmpty) ...[
+                            _buildSectionTitle('Weekend Activities'),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange[100]!),
+                              ),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: sender.weekendInterests.map((interest) {
+                                  return Chip(
+                                    label: Text(
+                                      interest,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    backgroundColor: Colors.orange.withOpacity(0.1),
+                                    side: const BorderSide(color: Colors.orange, width: 0.5),
+                                    labelStyle: const TextStyle(color: Colors.orange),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
