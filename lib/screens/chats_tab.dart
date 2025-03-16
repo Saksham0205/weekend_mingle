@@ -6,6 +6,7 @@ import '../providers/user_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../models/user_model.dart';
+import 'home_screen.dart';
 
 class ChatsTab extends StatefulWidget {
   const ChatsTab({super.key});
@@ -63,7 +64,20 @@ class _ChatsTabState extends State<ChatsTab> {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    DefaultTabController.of(context).animateTo(1); // Switch to Connections tab
+                    // Navigate to the Connections tab in the HomeScreen
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                    // Access the parent HomeScreen state to switch tabs
+                    // This is safer than using DefaultTabController which might not be available
+                    final scaffoldContext = ScaffoldMessenger.of(context).context;
+                    if (scaffoldContext != null) {
+                      // Set the index to 1 (Connections tab)
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HomeScreen(initialTabIndex: 1)),
+                      );
+                    }
                   },
                   child: const Text('Find Connections'),
                 ),

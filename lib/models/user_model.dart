@@ -98,7 +98,7 @@ class UserModel {
       github: data['github'],
       twitter: data['twitter'],
       personalityAnswers: data['personalityAnswers'] != null
-          ? Map<String, String>.from(data['personalityAnswers'].map((key, value) => MapEntry(key.toString(), value.toString())))
+          ? Map<String, String>.from(data['personalityAnswers'])
           : null,
     );
   }
@@ -129,7 +129,7 @@ class UserModel {
       github: data['github'],
       twitter: data['twitter'],
       personalityAnswers: data['personalityAnswers'] != null
-          ? Map<String, String>.from(data['personalityAnswers'].map((key, value) => MapEntry(key.toString(), value.toString())))
+          ? Map<String, String>.from(data['personalityAnswers'])
           : null,
     );
   }

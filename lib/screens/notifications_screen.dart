@@ -22,7 +22,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
     if (userProvider.user != null) {
-      notificationProvider.initializeNotifications(userProvider.user!.uid);
+      // Use addPostFrameCallback to ensure this happens after the build is complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notificationProvider.initializeNotifications(userProvider.user!.uid);
+      });
     }
   }
 

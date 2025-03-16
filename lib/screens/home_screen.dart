@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:weekend_mingle/screens/chat_screen.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/friend_service.dart';
 import '../services/location_service.dart';
 import '../services/permission_service.dart';
+import '../providers/user_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'edit_profile_screen.dart';
-
+import 'explore_tab.dart';
+import 'friends_tab.dart';
+import '../providers/feed_provider.dart';
+import '../providers/notification_provider.dart';
+import 'notifications_screen.dart';
+import 'groups_events_screen.dart';
+import 'chats_tab.dart' as ChatsTab;
+import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialTabIndex;
+
+  const HomeScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -26,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialTabIndex;
     _requestPermissions();
   }
 
@@ -33,512 +45,476 @@ class _HomeScreenState extends State<HomeScreen> {
     await PermissionService.checkAndRequestAllPermissions(context);
   }
 
-  Widget _buildDiscoverSection(UserModel currentUserData) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Discover',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .where(FieldPath.documentId, isNotEqualTo: currentUserData.uid)
-                .where('interests', arrayContainsAny: currentUserData.interests)
-                .limit(10)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final users = snapshot.data!.docs
-                  .map((doc) => UserModel.fromFirestore(doc, null))
-                  .where((user) =>
-              !currentUserData.friends.contains(user.uid) &&
-                  !currentUserData.pendingFriendRequests.contains(user.uid) &&
-                  !currentUserData.sentFriendRequests.contains(user.uid))
-                  .toList();
-
-              if (users.isEmpty) {
-                return const Center(
-                  child: Text('No matching professionals found'),
-                );
-              }
-
-              return SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                    final user = users[index];
-                    return Container(
-                      width: 160,
-                      margin: const EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          children: [
-                            if (user.photoUrl != null)
-                              CachedNetworkImage(
-                                imageUrl: user.photoUrl!,
-                                fit: BoxFit.cover,
-                                height: double.infinity,
-                                width: double.infinity,
-                                placeholder: (context, url) => Container(
-                                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                ),
-                                errorWidget: (context, url, error) => Container(
-                                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.7),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 12,
-                              left: 12,
-                              right: 12,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    user.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    user.profession,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Positioned.fill(
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => _showUserProfile(context, user),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeekendActivitiesSection(UserModel currentUserData) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Weekend Activities',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .where('weekendInterests', arrayContainsAny: currentUserData.weekendInterests)
-                .where(FieldPath.documentId, isNotEqualTo: currentUserData.uid)
-                .limit(5)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final users = snapshot.data!.docs
-                  .map((doc) => UserModel.fromFirestore(doc, null))
-                  .where((user) =>
-              !currentUserData.friends.contains(user.uid) &&
-                  !currentUserData.pendingFriendRequests.contains(user.uid) &&
-                  !currentUserData.sentFriendRequests.contains(user.uid))
-                  .toList();
-
-              if (users.isEmpty) {
-                return const Center(
-                  child: Text('No matching activities found'),
-                );
-              }
-
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: users.length,
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  final commonInterests = user.weekendInterests
-                      .where((interest) => currentUserData.weekendInterests.contains(interest))
-                      .toList();
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                        backgroundImage: user.photoUrl != null
-                            ? CachedNetworkImageProvider(user.photoUrl!)
-                            : null,
-                        child: user.photoUrl == null
-                            ? Text(
-                          user.name[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 24,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        )
-                            : null,
-                      ),
-                      title: Text(
-                        user.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(
-                            'Interested in: ${commonInterests.join(", ")}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                size: 16,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Available on weekends',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      onTap: () => _showUserProfile(context, user),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showUserProfile(BuildContext context, UserModel user) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Theme.of(context).primaryColor,
-                            Theme.of(context).primaryColor.withOpacity(0.7),
-                          ],
-                        ),
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 40,
-                      left: 0,
-                      right: 0,
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Colors.white,
-                            child: CircleAvatar(
-                              radius: 48,
-                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                              backgroundImage: user.photoUrl != null
-                                  ? CachedNetworkImageProvider(user.photoUrl!)
-                                  : null,
-                              child: user.photoUrl == null
-                                  ? Text(
-                                user.name[0].toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                              )
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            user.name,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            user.profession,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (user.bio != null && user.bio!.isNotEmpty) ...[
-                        const Text(
-                          'About',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(user.bio!),
-                        const SizedBox(height: 24),
-                      ],
-                      const Text(
-                        'Interests',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: user.interests.map((interest) => Chip(
-                          label: Text(interest),
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                        )).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Weekend Activities',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: user.weekendInterests.map((interest) => Chip(
-                          label: Text(interest),
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                        )).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Connect'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 12,
-                            ),
-                          ),
-                          onPressed: () {
-                            final currentUser = _authService.currentUser;
-                            if (currentUser != null) {
-                              _sendFriendRequest(context, currentUser.uid, user);
-                              Navigator.pop(context);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _sendFriendRequest(BuildContext context, String senderId, UserModel receiver) async {
-    try {
-      final friendService = FriendService();
-      await friendService.sendFriendRequest(senderId, receiver.uid);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Friend request sent to ${receiver.name}')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending friend request: $e')),
-        );
-      }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userProvider = Provider.of<UserProvider>(context);
+    if (userProvider.user?.uid != null) {
+      // Use addPostFrameCallback to ensure this happens after the build is complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<FeedProvider>(context, listen: false)
+            .initializeFeed(userProvider.user!.uid);
+        Provider.of<NotificationProvider>(context, listen: false)
+            .initializeNotifications(userProvider.user!.uid);
+      });
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final authService = AuthService();
-    final currentUser = authService.currentUser;
-    if (currentUser == null) return const Center(child: Text('Not logged in'));
+  PreferredSizeWidget _buildTopNavigationBar() {
+    final userProvider = Provider.of<UserProvider>(context);
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+    final user = userProvider.user;
 
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .snapshots(),
-      builder: (context, userSnapshot) {
-        if (!userSnapshot.hasData) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      title: Row(
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() => _currentIndex = 4); // Switch to profile tab
+            },
+            child: CircleAvatar(
+              radius: 20,
+              backgroundImage: user?.photoUrl != null
+                  ? CachedNetworkImageProvider(user!.photoUrl!)
+                  : null,
+              child: user?.photoUrl == null ? const Icon(Icons.person) : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search professionals, groups, events...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.notifications_outlined),
+                if (notificationProvider.unreadCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 12,
+                        minHeight: 12,
+                      ),
+                      child: Text(
+                        notificationProvider.unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainFeed() {
+    return Consumer<FeedProvider>(
+      builder: (context, feedProvider, child) {
+        if (feedProvider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final currentUserData = UserModel.fromFirestore(userSnapshot.data!, null);
+        if (feedProvider.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Error: ${feedProvider.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final userProvider = Provider.of<UserProvider>(context, listen: false);
+                    feedProvider.initializeFeed(userProvider.user?.uid);
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
 
         return RefreshIndicator(
           onRefresh: () async {
-            // Refresh will happen automatically due to StreamBuilder
+            final userProvider = Provider.of<UserProvider>(context, listen: false);
+            feedProvider.initializeFeed(userProvider.user?.uid);
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDiscoverSection(currentUserData),
-                const Divider(),
-                _buildWeekendActivitiesSection(currentUserData),
-              ],
-            ),
+          child: ListView.builder(
+            itemCount: feedProvider.posts.length + 2, // +2 for stories and group invites
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _buildStoryBar();
+              }
+              if (index == 1) {
+                return _buildGroupInvites();
+              }
+              final post = feedProvider.posts[index - 2];
+              return _buildPostCard(post);
+            },
           ),
         );
       },
     );
   }
+
+  Widget _buildStoryBar() {
+    return Container(
+      height: 100,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 10, // Replace with actual story count
+        itemBuilder: (context, index) {
+          return Container(
+            width: 70,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Theme.of(context).primaryColor, Colors.purple],
+              ),
+              borderRadius: BorderRadius.circular(35),
+            ),
+            padding: const EdgeInsets.all(2),
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: Theme.of(context).primaryColor),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGroupInvites() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Weekend Plans',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const GroupsEventsScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('See All'),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: 5,
+              itemBuilder: (context, index) {
+                return Card(
+                  margin: const EdgeInsets.all(8),
+                  child: Container(
+                    width: 200,
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Weekend Activity ${index + 1}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const Text('Join us for a weekend adventure!'),
+                        const Spacer(),
+                        ElevatedButton(
+                          onPressed: () {},
+                          child: const Text('Join'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPostCard(Post post) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final currentUser = userProvider.user;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundImage: post.userPhotoUrl != null
+                  ? CachedNetworkImageProvider(post.userPhotoUrl!)
+                  : null,
+              child: post.userPhotoUrl == null ? const Icon(Icons.person) : null,
+            ),
+            title: Text(post.userName),
+            subtitle: Text(timeago.format(post.timestamp)),
+            trailing: PopupMenuButton(
+              itemBuilder: (context) => [
+                if (currentUser?.uid == post.userId)
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete'),
+                  ),
+                const PopupMenuItem(
+                  value: 'report',
+                  child: Text('Report'),
+                ),
+              ],
+              onSelected: (value) {
+                if (value == 'delete') {
+                  Provider.of<FeedProvider>(context, listen: false)
+                      .deletePost(post.id);
+                }
+              },
+            ),
+          ),
+          if (post.imageUrl != null)
+            Image.network(
+              post.imageUrl!,
+              fit: BoxFit.cover,
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(post.content),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: Icon(
+                  post.likes.contains(currentUser?.uid)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: post.likes.contains(currentUser?.uid)
+                      ? Colors.red
+                      : null,
+                ),
+                onPressed: () {
+                  if (currentUser != null) {
+                    Provider.of<FeedProvider>(context, listen: false)
+                        .likePost(post.id, currentUser.uid);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.comment_outlined),
+                onPressed: () {
+                  // Show comment dialog
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () {
+                  // Handle share
+                },
+              ),
+            ],
+          ),
+          if (post.likes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '${post.likes.length} ${post.likes.length == 1 ? 'like' : 'likes'}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          if (post.comments.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Comments',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: post.comments.length > 2 ? 2 : post.comments.length,
+              itemBuilder: (context, index) {
+                final comment = post.comments[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: comment.userPhotoUrl != null
+                        ? CachedNetworkImageProvider(comment.userPhotoUrl!)
+                        : null,
+                    child: comment.userPhotoUrl == null
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
+                  title: Text(comment.userName),
+                  subtitle: Text(comment.content),
+                );
+              },
+            ),
+            if (post.comments.length > 2)
+              TextButton(
+                onPressed: () {
+                  // Show all comments
+                },
+                child: Text('View all ${post.comments.length} comments'),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: _buildTopNavigationBar(),
+      body: _currentIndex == 0 ? _buildMainFeed() : _getScreen(),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: BottomNavigationBar(
+            elevation: 0,
+            backgroundColor: Colors.white,
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Colors.grey,
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
+            items: [
+              _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0),
+              _buildNavItem(Icons.people_outline, Icons.people, 'Connections', 1),
+              _buildNavItem(Icons.chat_bubble_outline, Icons.chat_bubble, 'Chats', 2),
+              _buildNavItem(Icons.explore_outlined, Icons.explore, 'Explore', 3),
+              _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton(
+        onPressed: () {
+          // Show create post dialog
+        },
+        child: const Icon(Icons.add),
+      )
+          : null,
+    );
+  }
+
+  BottomNavigationBarItem _buildNavItem(
+      IconData icon, IconData activeIcon, String label, int index) {
+    return BottomNavigationBarItem(
+      icon: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _currentIndex == index
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon),
+      ),
+      activeIcon: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(activeIcon),
+      ),
+      label: label,
+    );
+  }
+
+  Widget _getScreen() {
+    switch (_currentIndex) {
+      case 1:
+        return const FriendsTab();
+      case 2:
+        return const ChatsTab.ChatsTab();
+      case 3:
+        return const ExploreTab();
+      case 4:
+        return const ProfileTab();
+      default:
+        return _buildMainFeed();
+    }
+  }
 }
 
 class DiscoverTab extends StatelessWidget {
   const DiscoverTab({super.key});
+
 
   Future<void> _sendFriendRequest(
       BuildContext context, String currentUserId, UserModel otherUser) async {
@@ -673,8 +649,7 @@ class DiscoverTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final currentUserData =
-        UserModel.fromFirestore(userSnapshot.data!, null);
+        final currentUserData = UserModel.fromFirestore(userSnapshot.data!, null);
 
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
@@ -687,8 +662,7 @@ class DiscoverTab extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline,
-                        size: 48, color: Colors.red),
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
                     const SizedBox(height: 16),
                     Text(
                       'Error: ${snapshot.error}',
@@ -777,22 +751,18 @@ class DiscoverTab extends StatelessWidget {
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
                                           colors: [
-                                            Theme.of(context)
-                                                .primaryColor
-                                                .withOpacity(0.8),
+                                            Theme.of(context).primaryColor.withOpacity(0.8),
                                             Colors.white,
                                           ],
                                         ),
-                                        borderRadius:
-                                        const BorderRadius.vertical(
+                                        borderRadius: const BorderRadius.vertical(
                                           top: Radius.circular(20),
                                         ),
                                       ),
                                     ),
                                     Positioned.fill(
                                       child: Column(
-                                        mainAxisAlignment:
-                                        MainAxisAlignment.center,
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
                                           Hero(
                                             tag: 'profile-${user.uid}',
@@ -801,28 +771,17 @@ class DiscoverTab extends StatelessWidget {
                                               backgroundColor: Colors.white,
                                               child: CircleAvatar(
                                                 radius: 48,
-                                                backgroundColor:
-                                                Theme.of(context)
-                                                    .primaryColor
-                                                    .withOpacity(0.1),
-                                                backgroundImage: user
-                                                    .photoUrl !=
-                                                    null
-                                                    ? CachedNetworkImageProvider(
-                                                    user.photoUrl!)
-                                                as ImageProvider
+                                                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                                                backgroundImage: user.photoUrl != null
+                                                    ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
                                                     : null,
                                                 child: user.photoUrl == null
                                                     ? Text(
-                                                  user.name[0]
-                                                      .toUpperCase(),
+                                                  user.name[0].toUpperCase(),
                                                   style: TextStyle(
                                                     fontSize: 36,
-                                                    fontWeight:
-                                                    FontWeight.bold,
-                                                    color:
-                                                    Theme.of(context)
-                                                        .primaryColor,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context).primaryColor,
                                                   ),
                                                 )
                                                     : null,
@@ -846,27 +805,23 @@ class DiscoverTab extends StatelessWidget {
                                 Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment:
-                                        MainAxisAlignment.center,
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
                                           ElevatedButton.icon(
                                             icon: const Icon(Icons.person_add),
                                             label: const Text('Add Friend'),
                                             onPressed: () {
-                                              _sendFriendRequest(context,
-                                                  currentUser.uid, user);
+                                              _sendFriendRequest(context, currentUser.uid, user);
                                               Navigator.pop(context);
                                             },
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 24),
-                                      if (user.bio != null &&
-                                          user.bio!.isNotEmpty) ...[
+                                      if (user.bio != null && user.bio!.isNotEmpty) ...[
                                         const Text(
                                           'About',
                                           style: TextStyle(
@@ -882,8 +837,7 @@ class DiscoverTab extends StatelessWidget {
                                         _buildSkillsSection(user.skills),
                                       if (user.weekendInterests.isNotEmpty) ...[
                                         const SizedBox(height: 24),
-                                        _buildWeekendInterests(
-                                            user.weekendInterests),
+                                        _buildWeekendInterests(user.weekendInterests),
                                       ],
                                       const SizedBox(height: 24),
                                       const Text(
@@ -894,8 +848,7 @@ class DiscoverTab extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      _buildAvailabilityChips(
-                                          user.availability),
+                                      _buildAvailabilityChips(user.availability),
                                     ],
                                   ),
                                 ),
@@ -905,8 +858,7 @@ class DiscoverTab extends StatelessWidget {
                         ),
                       ),
                     );
-                  },
-                );
+                  },);
               },
             );
           },
@@ -930,8 +882,7 @@ class AnimatedCard extends StatefulWidget {
   State<AnimatedCard> createState() => _AnimatedCardState();
 }
 
-class _AnimatedCardState extends State<AnimatedCard>
-    with SingleTickerProviderStateMixin {
+class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
@@ -1006,12 +957,9 @@ class _AnimatedCardState extends State<AnimatedCard>
                         tag: 'profile-${user.uid}',
                         child: CircleAvatar(
                           radius: 40,
-                          backgroundColor:
-                          Theme.of(context).primaryColor.withOpacity(0.1),
-                          backgroundImage:
-                          user.photoUrl != null && user.photoUrl!.isNotEmpty
-                              ? CachedNetworkImageProvider(user.photoUrl!)
-                          as ImageProvider
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                              ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
                               : null,
                           child: user.photoUrl == null
                               ? Text(
@@ -1217,9 +1165,8 @@ class MessagesTab extends StatelessWidget {
             }
 
             final otherUserId = participants.firstWhere(
-                  (id) => id != currentUser.uid,
-              orElse: () => '',
-            );
+                    (id) => id != currentUser.uid,
+                orElse: () => '');
 
             if (otherUserId.isEmpty) {
               return const SizedBox.shrink();
@@ -1307,8 +1254,7 @@ class MessagesTab extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
-                            ),
-                          ),
+                            ),),
                         if (unreadCount > 0)
                           Container(
                             margin: const EdgeInsets.only(top: 4),
