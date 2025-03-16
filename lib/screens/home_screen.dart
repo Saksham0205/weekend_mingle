@@ -7,7 +7,7 @@ import '../services/location_service.dart';
 import '../services/permission_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'chat_screen.dart';
-import '../screens/edit_profile_screen.dart';
+import 'edit_profile_screen.dart';
 import 'friends_tab.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -129,9 +129,8 @@ class DiscoverTab extends StatelessWidget {
 
     // Create or get existing chat document
     final chatId = [currentUser.uid, otherUser.uid]..sort();
-    final chatDocRef = FirebaseFirestore.instance
-        .collection('chats')
-        .doc(chatId.join('_'));
+    final chatDocRef =
+        FirebaseFirestore.instance.collection('chats').doc(chatId.join('_'));
 
     final chatDoc = await chatDocRef.get();
     if (!chatDoc.exists) {
@@ -159,7 +158,8 @@ class DiscoverTab extends StatelessWidget {
     }
   }
 
-  Future<void> _sendFriendRequest(BuildContext context, String currentUserId, UserModel otherUser) async {
+  Future<void> _sendFriendRequest(
+      BuildContext context, String currentUserId, UserModel otherUser) async {
     final friendService = FriendService();
     try {
       await friendService.sendFriendRequest(currentUserId, otherUser.uid);
@@ -180,9 +180,12 @@ class DiscoverTab extends StatelessWidget {
   Widget _buildAvailabilityChips(Map<String, bool> availability) {
     final availableTimes = availability.entries
         .where((entry) => entry.value)
-        .map((entry) => entry.key.split('_').map(
-          (word) => word[0].toUpperCase() + word.substring(1),
-    ).join(' '))
+        .map((entry) => entry.key
+            .split('_')
+            .map(
+              (word) => word[0].toUpperCase() + word.substring(1),
+            )
+            .join(' '))
         .toList();
 
     if (availableTimes.isEmpty) return const SizedBox.shrink();
@@ -516,100 +519,121 @@ class DiscoverTab extends StatelessWidget {
                           ],
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Hero(
-                            tag: 'profile-${user.uid}',
-                            child: CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                              backgroundImage: user.photoUrl != null
-                                  ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                                  : null,
-                              child: user.photoUrl == null
-                                  ? Text(
-                                user.name[0].toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                              )
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            user.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user.profession,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                          if (user.industry != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              user.industry!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[500],
-                                fontStyle: FontStyle.italic,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                          const Spacer(),
-                          if (user.weekendInterests.isNotEmpty)
-                            Text(
-                              user.weekendInterests.first,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.purple[700],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          if (user.openToNetworking)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.handshake_outlined,
-                                    size: 16,
-                                    color: Colors.green[600],
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Profile image
+                                Hero(
+                                  tag: 'profile-${user.uid}',
+                                  child: CircleAvatar(
+                                    radius: 40,
+                                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                        ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
+                                        : null,
+                                    child: user.photoUrl == null
+                                        ? Text(
+                                      user.name[0].toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).primaryColor,
+                                      ),
+                                    )
+                                        : null,
                                   ),
-                                  const SizedBox(width: 4),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // User name
+                                Text(
+                                  user.name,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 4),
+
+                                // Profession
+                                Text(
+                                  user.profession,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                // Industry (if available)
+                                if (user.industry != null) ...[
+                                  const SizedBox(height: 4),
                                   Text(
-                                    'Open to connect',
+                                    user.industry!,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.green[600],
+                                      color: Colors.grey[500],
+                                      fontStyle: FontStyle.italic,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
-                              ),
+
+                                // Spacer is removed as it can cause layout issues in constrained spaces
+                                const SizedBox(height: 12),
+
+                                // Weekend interests
+                                if (user.weekendInterests.isNotEmpty)
+                                  Text(
+                                    user.weekendInterests.first,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.purple[700],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
+
+                                // Open to networking indicator
+                                if (user.openToNetworking)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.handshake_outlined,
+                                          size: 16,
+                                          color: Colors.green[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Open to connect',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.green[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -626,7 +650,8 @@ class DiscoverTab extends StatelessWidget {
 class MessagesTab extends StatelessWidget {
   const MessagesTab({super.key});
 
-  void _navigateToChat(BuildContext context, UserModel otherUser, String chatId) {
+  void _navigateToChat(
+      BuildContext context, UserModel otherUser, String chatId) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -719,7 +744,7 @@ class MessagesTab extends StatelessWidget {
             }
 
             final otherUserId = participants.firstWhere(
-                  (id) => id != currentUser.uid,
+              (id) => id != currentUser.uid,
               orElse: () => '',
             );
 
@@ -733,17 +758,21 @@ class MessagesTab extends StatelessWidget {
                   .doc(otherUserId)
                   .get(),
               builder: (context, userSnapshot) {
-                if (!userSnapshot.hasData || userSnapshot.data?.data() == null) {
+                if (!userSnapshot.hasData ||
+                    userSnapshot.data?.data() == null) {
                   return const SizedBox.shrink();
                 }
 
-                final otherUser = UserModel.fromFirestore(userSnapshot.data!, null);
+                final otherUser =
+                    UserModel.fromFirestore(userSnapshot.data!, null);
                 final lastMessage = chat['lastMessage'] as String?;
                 final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
-                final unreadCount = chat['unreadCount${currentUser.uid}'] as int? ?? 0;
+                final unreadCount =
+                    chat['unreadCount${currentUser.uid}'] as int? ?? 0;
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                   elevation: 0,
                   child: ListTile(
                     onTap: () {
@@ -753,19 +782,23 @@ class MessagesTab extends StatelessWidget {
                       tag: 'chat-${otherUser.uid}',
                       child: CircleAvatar(
                         radius: 28,
-                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                        backgroundImage: otherUser.photoUrl != null && otherUser.photoUrl!.isNotEmpty
-                            ? CachedNetworkImageProvider(otherUser.photoUrl!) as ImageProvider
+                        backgroundColor:
+                            Theme.of(context).primaryColor.withOpacity(0.1),
+                        backgroundImage: otherUser.photoUrl != null &&
+                                otherUser.photoUrl!.isNotEmpty
+                            ? CachedNetworkImageProvider(otherUser.photoUrl!)
+                                as ImageProvider
                             : null,
-                        child: otherUser.photoUrl == null || otherUser.photoUrl!.isEmpty
+                        child: otherUser.photoUrl == null ||
+                                otherUser.photoUrl!.isEmpty
                             ? Text(
-                          otherUser.name[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        )
+                                otherUser.name[0].toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              )
                             : null,
                       ),
                     ),
@@ -778,18 +811,18 @@ class MessagesTab extends StatelessWidget {
                     ),
                     subtitle: lastMessage != null
                         ? Text(
-                      lastMessage,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: unreadCount > 0
-                            ? Colors.black87
-                            : Colors.grey[600],
-                        fontWeight: unreadCount > 0
-                            ? FontWeight.w500
-                            : FontWeight.normal,
-                      ),
-                    )
+                            lastMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: unreadCount > 0
+                                  ? Colors.black87
+                                  : Colors.grey[600],
+                              fontWeight: unreadCount > 0
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          )
                         : null,
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -891,15 +924,18 @@ class ProfileTab extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 64,
-                    backgroundImage: userData.photoUrl != null && userData.photoUrl!.isNotEmpty
-                        ? NetworkImage(userData.photoUrl!)
+                    backgroundImage: userData.photoUrl != null &&
+                            userData.photoUrl!.isNotEmpty
+                        ? CachedNetworkImageProvider(userData.photoUrl!)
+                            as ImageProvider
                         : null,
-                    child: userData.photoUrl == null || userData.photoUrl!.isEmpty
-                        ? Text(
-                      userData.name[0].toUpperCase(),
-                      style: const TextStyle(fontSize: 48),
-                    )
-                        : null,
+                    child:
+                        userData.photoUrl == null || userData.photoUrl!.isEmpty
+                            ? Text(
+                                userData.name[0].toUpperCase(),
+                                style: const TextStyle(fontSize: 48),
+                              )
+                            : null,
                   ),
                   Positioned(
                     bottom: 0,
@@ -915,8 +951,9 @@ class ProfileTab extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  EditProfileScreen(user: userData,),
+                              builder: (context) => EditProfileScreen(
+                                user: userData,
+                              ),
                             ),
                           );
                         },
@@ -957,7 +994,8 @@ class ProfileTab extends StatelessWidget {
                     const Icon(Icons.location_on, color: Colors.grey),
                     const SizedBox(width: 8),
                     Text(
-                      LocationService.getLocationDescription(userData.location!),
+                      LocationService.getLocationDescription(
+                          userData.location!),
                       style: const TextStyle(
                         fontSize: 16,
                         color: Colors.grey,
@@ -985,4 +1023,4 @@ class ProfileTab extends StatelessWidget {
       },
     );
   }
-} 
+}

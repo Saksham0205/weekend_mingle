@@ -46,23 +46,31 @@ class UserProvider with ChangeNotifier {
   // Update user data
   Future<void> updateUserData(Map<String, dynamic> data) async {
     try {
+      print('UserProvider: Starting data update: ${data.keys}');
+
+      // Clear cached data to force a fresh fetch
+      _userDataService.clearCache();
+
+      // Update data in Firestore
       await _userDataService.updateUserData(data);
 
-      // Update local user data
-      if (_user != null) {
-        _user = UserModel.fromMap(
-          {..._user!.toMap(), ...data},
-          _user!.uid,
-        );
+      // Force a fresh data fetch after update
+      final freshUser = await _userDataService.getCurrentUser();
+      if (freshUser != null) {
+        _user = freshUser;
 
-        // Update local storage
+        // Update in SharedPreferences with the fresh data
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_userDataKey, json.encode(_user!.toMap()));
+        final jsonData = json.encode(_user!.toMap());
+        await prefs.setString(_userDataKey, jsonData);
+        print('UserProvider: Local storage updated');
       }
 
+      // Notify listeners to update UI
       notifyListeners();
+      print('UserProvider: UI refresh triggered');
     } catch (e) {
-      print('Error updating user data: $e');
+      print('UserProvider update error: $e');
       rethrow;
     }
   }

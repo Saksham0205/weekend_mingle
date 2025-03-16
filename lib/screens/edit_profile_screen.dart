@@ -883,55 +883,56 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+
     try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      // Collect all data in one map
+      final updatedData = {
+        'name': _nameController.text.trim(),
+        'bio': _bioController.text.trim(),
+        'profession': _professionController.text.trim(),
+        'company': _companyController.text.trim(),
+        'industry': _industryController.text.trim(),
+        'locationName': _locationNameController.text.trim(),
+        'skills': _selectedSkills,
+        'weekendInterests': _selectedWeekendInterests,
+        'availability': _availability,
+        'personalityAnswers': _personalityAnswers,
+        'linkedin': _linkedinController.text.trim(),
+        'github': _githubController.text.trim(),
+        'twitter': _twitterController.text.trim(),
+      };
 
-      // Update profile info
-      await userProvider.updateProfileInfo(
-        name: _nameController.text.trim(),
-        bio: _bioController.text.trim(),
-        profession: _professionController.text.trim(),
-        company: _companyController.text.trim(),
-        industry: _industryController.text.trim(),
-        locationName: _locationNameController.text.trim(),
-      );
-
-      // Update photo if changed
+      // Add photoUrl only if it exists
       if (_photoUrl != null) {
-        await userProvider.updateProfilePhoto(_photoUrl!);
+        updatedData['photoUrl'] = _photoUrl!;
       }
 
-      // Update skills and interests
-      await userProvider.updateSkillsAndInterests(
-        skills: _selectedSkills,
-        weekendInterests: _selectedWeekendInterests,
-      );
+      print('Saving profile with data: ${updatedData.keys}');
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-      // Update availability
-      await userProvider.updateAvailability(_availability);
-
-      // Update personality answers
-      await userProvider.updatePersonalityAnswers(_personalityAnswers);
-
-      // Update social media
-      await userProvider.updateSocialMedia(
-        linkedin: _linkedinController.text.trim(),
-        github: _githubController.text.trim(),
-        twitter: _twitterController.text.trim(),
-      );
+      // Single update call instead of multiple separate calls
+      await userProvider.updateUserData(updatedData);
 
       if (mounted) {
+        // Force UI refresh by reinitializing
+        await userProvider.initializeUser();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
         Navigator.pop(context);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving profile: $e')),
-      );
+      print('Error saving profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving profile: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
