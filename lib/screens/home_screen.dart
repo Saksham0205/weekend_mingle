@@ -51,13 +51,19 @@ class _HomeScreenState extends State<HomeScreen> {
       await friendService.sendFriendRequest(currentUserId, otherUser.uid);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Friend request sent to ${otherUser.name}')),
+          SnackBar(
+            content: Text('Friend request sent to ${otherUser.name}'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending friend request: $e')),
+          SnackBar(
+            content: Text('Error sending friend request: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -226,12 +232,10 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           print('Error fetching users: ${snapshot.error}');
-          print('Error stack trace: ${snapshot.stackTrace}');
           return const SizedBox.shrink();
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          print('Waiting for user data...');
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16.0),
@@ -240,101 +244,115 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        print('Number of documents found: ${snapshot.data?.docs.length ?? 0}');
+        return StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .snapshots(),
+          builder: (context, currentUserSnapshot) {
+            if (!currentUserSnapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        final users = snapshot.data?.docs
-            .map((doc) {
-          try {
-            print('Processing document ID: ${doc.id}');
-            print('Document data: ${doc.data()}');
-            return UserModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>, null);
-          } catch (e) {
-            print('Error parsing user data for document ${doc.id}: $e');
-            print('Document data: ${doc.data()}');
-            return null;
-          }
-        })
-            .where((user) => user != null)
-            .toList() ??
-            [];
+            final currentUserData = currentUserSnapshot.data!.data() as Map<String, dynamic>;
+            final sentRequests = List<String>.from(currentUserData['sentFriendRequests'] ?? []);
+            final friends = List<String>.from(currentUserData['friends'] ?? []);
+            final pendingRequests = List<String>.from(currentUserData['pendingFriendRequests'] ?? []);
 
-        print('Number of valid users parsed: ${users.length}');
+            final users = snapshot.data?.docs
+                .map((doc) {
+              try {
+                // Skip users who are already friends or have pending requests
+                if (sentRequests.contains(doc.id) ||
+                    friends.contains(doc.id) ||
+                    pendingRequests.contains(doc.id)) {
+                  return null;
+                }
+                return UserModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>, null);
+              } catch (e) {
+                print('Error parsing user data for document ${doc.id}: $e');
+                return null;
+              }
+            })
+                .where((user) => user != null)
+                .toList() ??
+                [];
 
-        if (users.isEmpty) {
-          print('No users found after parsing');
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Center(
+            if (users.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No new connections available',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Check back later for more people to connect with',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(top: 16),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 48,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No users found',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'People to Connect',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _currentIndex = 3); // Switch to explore tab
+                          },
+                          child: const Text('See All'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try again later to find people to connect with',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
+                  SizedBox(
+                    height: 180,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: users.length,
+                      itemBuilder: (context, index) => _buildUserCard(users[index]!),
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
-            ),
-          );
-        }
-
-        print('Building user list with ${users.length} users');
-        return Container(
-          margin: const EdgeInsets.only(top: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'People to Connect',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() => _currentIndex = 3); // Switch to explore tab
-                      },
-                      child: const Text('See All'),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 180,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemCount: users.length,
-                  itemBuilder: (context, index) => _buildUserCard(users[index]!),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -846,203 +864,268 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showUserBottomSheet(UserModel user) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Stack(
-            children: [
-              SingleChildScrollView(
-                controller: controller,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Stack(
-                      children: [
-                        Container(
-                          height: 200,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Theme.of(context).primaryColor,
-                                Theme.of(context).primaryColor.withOpacity(0.8),
-                              ],
+    final currentUser = Provider.of<UserProvider>(context, listen: false).user;
+    if (currentUser == null) return;
+
+    // Check if they are friends before showing the chat option
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get()
+        .then((doc) {
+      final userData = doc.data() as Map<String, dynamic>;
+      final friends = List<String>.from(userData['friends'] ?? []);
+      final isFriend = friends.contains(user.uid);
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, controller) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  controller: controller,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Theme.of(context).primaryColor,
+                                  Theme.of(context).primaryColor.withOpacity(0.8),
+                                ],
+                              ),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
                             ),
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                          ),
-                          child: user.photoUrl != null && user.photoUrl!.isNotEmpty && Uri.tryParse(user.photoUrl!)?.hasAbsolutePath == true
-                              ? ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                            child: CachedNetworkImage(
-                              imageUrl: user.photoUrl!,
-                              fit: BoxFit.cover,
-                              errorWidget: (context, url, error) => Center(
-                                child: Text(
-                                  user.name[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 72,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                            child: user.photoUrl != null && user.photoUrl!.isNotEmpty && Uri.tryParse(user.photoUrl!)?.hasAbsolutePath == true
+                                ? ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                              child: CachedNetworkImage(
+                                imageUrl: user.photoUrl!,
+                                fit: BoxFit.cover,
+                                errorWidget: (context, url, error) => Center(
+                                  child: Text(
+                                    user.name[0].toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 72,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          )
-                              : Center(
-                            child: Text(
-                              user.name[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 72,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                            )
+                                : Center(
+                              child: Text(
+                                user.name[0].toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 72,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),),
-                        Positioned(
-                          top: 16,
-                          right: 16,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
                           ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      user.name,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      user.profession,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    if (user.company != null) ...[
-                                      const SizedBox(height: 2),
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
                                       Text(
-                                        user.company!,
+                                        user.name,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        user.profession,
                                         style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[500],
+                                          fontSize: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      if (user.company != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          user.company!,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (isFriend)
+                                  Row(
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ChatScreen(
+                                                otherUser: user,
+                                                chatId: '${currentUser.uid}_${user.uid}',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.chat),
+                                        label: const Text('Message'),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 12,
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  ],
+                                  )
+                                else
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      _sendFriendRequest(context, currentUser.uid, user);
+                                      Navigator.pop(context);
+                                    },
+                                    icon: const Icon(Icons.person_add),
+                                    label: const Text('Connect'),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (user.locationName != null) ...[
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on,
+                                      size: 20, color: Colors.grey[600]),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    user.locationName!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (user.bio != null && user.bio!.isNotEmpty) ...[
+                              const SizedBox(height: 24),
+                              const Text(
+                                'About',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  // Handle connect action
-                                },
-                                icon: const Icon(Icons.person_add),
-                                label: const Text('Connect'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
-                                  ),
+                              const SizedBox(height: 8),
+                              Text(
+                                user.bio!,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 1.5,
                                 ),
                               ),
                             ],
-                          ),
-                          if (user.locationName != null) ...[
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Icon(Icons.location_on,
-                                    size: 20, color: Colors.grey[600]),
-                                const SizedBox(width: 8),
-                                Text(
-                                  user.locationName!,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                            if (user.skills.isNotEmpty) ...[
+                              const SizedBox(height: 24),
+                              const Text(
+                                'Professional Skills',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                          ],
-                          if (user.bio != null && user.bio!.isNotEmpty) ...[
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: user.skills.map((skill) {
+                                  return Chip(
+                                    label: Text(skill),
+                                    backgroundColor:
+                                    Theme.of(context).primaryColor.withOpacity(0.1),
+                                    labelStyle: TextStyle(
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                            if (user.weekendInterests.isNotEmpty) ...[
+                              const SizedBox(height: 24),
+                              const Text(
+                                'Weekend Interests',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: user.weekendInterests.map((interest) {
+                                  return Chip(
+                                    label: Text(interest),
+                                    backgroundColor: Colors.purple.withOpacity(0.1),
+                                    labelStyle: const TextStyle(
+                                      color: Colors.purple,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
                             const SizedBox(height: 24),
                             const Text(
-                              'About',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              user.bio!,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                          if (user.skills.isNotEmpty) ...[
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Professional Skills',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: user.skills.map((skill) {
-                                return Chip(
-                                  label: Text(skill),
-                                  backgroundColor:
-                                  Theme.of(context).primaryColor.withOpacity(0.1),
-                                  labelStyle: TextStyle(
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                          if (user.weekendInterests.isNotEmpty) ...[
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Weekend Interests',
+                              'Availability',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -1052,120 +1135,98 @@ class _HomeScreenState extends State<HomeScreen> {
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              children: user.weekendInterests.map((interest) {
+                              children: user.availability.entries
+                                  .where((entry) => entry.value)
+                                  .map((entry) {
+                                final time = entry.key.split('_').map(
+                                      (word) =>
+                                  word[0].toUpperCase() + word.substring(1),
+                                ).join(' ');
                                 return Chip(
-                                  label: Text(interest),
-                                  backgroundColor: Colors.purple.withOpacity(0.1),
+                                  label: Text(time),
+                                  backgroundColor: Colors.green.withOpacity(0.1),
                                   labelStyle: const TextStyle(
-                                    color: Colors.purple,
+                                    color: Colors.green,
                                   ),
                                 );
                               }).toList(),
                             ),
-                          ],
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Availability',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: user.availability.entries
-                                .where((entry) => entry.value)
-                                .map((entry) {
-                              final time = entry.key.split('_').map(
-                                    (word) =>
-                                word[0].toUpperCase() + word.substring(1),
-                              ).join(' ');
-                              return Chip(
-                                label: Text(time),
-                                backgroundColor: Colors.green.withOpacity(0.1),
-                                labelStyle: const TextStyle(
-                                  color: Colors.green,
+                            if (user.linkedin != null ||
+                                user.github != null ||
+                                user.twitter != null) ...[
+                              const SizedBox(height: 24),
+                              const Text(
+                                'Social Links',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                          if (user.linkedin != null ||
-                              user.github != null ||
-                              user.twitter != null) ...[
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Social Links',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                if (user.linkedin != null)
-                                  IconButton(
-                                    icon: const Icon(Icons.link),
-                                    onPressed: () {
-                                      // Handle LinkedIn link
-                                    },
-                                    tooltip: 'LinkedIn',
-                                  ),
-                                if (user.github != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 16),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.code),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  if (user.linkedin != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.link),
                                       onPressed: () {
-                                        // Handle GitHub link
+                                        // Handle LinkedIn link
                                       },
-                                      tooltip: 'GitHub',
+                                      tooltip: 'LinkedIn',
                                     ),
-                                  ),
-                                if (user.twitter != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 16),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.chat),
-                                      onPressed: () {
-                                        // Handle Twitter link
-                                      },
-                                      tooltip: 'Twitter',
+                                  if (user.github != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 16),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.code),
+                                        onPressed: () {
+                                          // Handle GitHub link
+                                        },
+                                        tooltip: 'GitHub',
+                                      ),
                                     ),
-                                  ),
-                              ],
-                            ),
+                                  if (user.twitter != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 16),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.chat),
+                                        onPressed: () {
+                                          // Handle Twitter link
+                                        },
+                                        tooltip: 'Twitter',
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 150,
+                      vertical: 8,
                     ),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 150,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _showCreateWeekendPlanDialog() {
@@ -1563,36 +1624,20 @@ class MessagesTab extends StatelessWidget {
       return const Center(child: Text('Not logged in'));
     }
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+    return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('chats')
-          .where('participants', arrayContains: currentUser.uid)
-          .orderBy('lastMessageTime', descending: true)
+          .collection('users')
+          .doc(currentUser.uid)
           .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (!snapshot.hasData) {
+      builder: (context, userSnapshot) {
+        if (!userSnapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final chats = snapshot.data!.docs;
+        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+        final friends = List<String>.from(userData['friends'] ?? []);
 
-        if (chats.isEmpty) {
+        if (friends.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1604,7 +1649,7 @@ class MessagesTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No messages yet',
+                  'No conversations yet',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -1612,7 +1657,7 @@ class MessagesTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Start chatting with someone!',
+                  'Connect with people to start chatting!',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[500],
@@ -1623,131 +1668,199 @@ class MessagesTab extends StatelessWidget {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(8),
-          itemCount: chats.length,
-          itemBuilder: (context, index) {
-            final chat = chats[index].data();
-            final participants = chat['participants'] as List?;
-
-            if (participants == null || participants.isEmpty) {
-              return const SizedBox.shrink();
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('chats')
+              .where('participants', arrayContains: currentUser.uid)
+              .orderBy('lastMessageTime', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              );
             }
 
-            final otherUserId = participants.firstWhere(
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final chats = snapshot.data!.docs.where((chat) {
+              final participants = List<String>.from(chat.data()['participants'] ?? []);
+              final otherUserId = participants.firstWhere(
                     (id) => id != currentUser.uid,
-                orElse: () => '');
+                orElse: () => '',
+              );
+              // Only show chats with friends
+              return friends.contains(otherUserId);
+            }).toList();
 
-            if (otherUserId.isEmpty) {
-              return const SizedBox.shrink();
+            if (chats.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Start a conversation',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Message your connections to plan weekend activities!',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
             }
 
-            return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(otherUserId)
-                  .get(),
-              builder: (context, userSnapshot) {
-                if (!userSnapshot.hasData ||
-                    userSnapshot.data?.data() == null) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: chats.length,
+              itemBuilder: (context, index) {
+                final chat = chats[index].data();
+                final participants = List<String>.from(chat['participants'] ?? []);
+                final otherUserId = participants.firstWhere(
+                      (id) => id != currentUser.uid,
+                  orElse: () => '',
+                );
+
+                if (otherUserId.isEmpty) {
                   return const SizedBox.shrink();
                 }
 
-                final otherUser =
-                UserModel.fromFirestore(userSnapshot.data!, null);
-                final lastMessage = chat['lastMessage'] as String?;
-                final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
-                final unreadCount =
-                    chat['unreadCount${currentUser.uid}'] as int? ?? 0;
+                return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(otherUserId)
+                      .get(),
+                  builder: (context, userSnapshot) {
+                    if (!userSnapshot.hasData ||
+                        userSnapshot.data?.data() == null) {
+                      return const SizedBox.shrink();
+                    }
 
-                return Card(
-                  margin:
-                  const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  elevation: 0,
-                  child: ListTile(
-                    onTap: () {
-                      _navigateToChat(context, otherUser, chats[index].id);
-                    },
-                    leading: Hero(
-                      tag: 'chat-${otherUser.uid}',
-                      child: CircleAvatar(
-                        radius: 28,
-                        backgroundColor:
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                        backgroundImage: otherUser.photoUrl != null &&
-                            otherUser.photoUrl!.isNotEmpty
-                            ? CachedNetworkImageProvider(otherUser.photoUrl!)
-                        as ImageProvider
-                            : null,
-                        child: otherUser.photoUrl == null ||
-                            otherUser.photoUrl!.isEmpty
-                            ? Text(
-                          otherUser.name[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 24,
+                    final otherUser =
+                    UserModel.fromFirestore(userSnapshot.data!, null);
+                    final lastMessage = chat['lastMessage'] as String?;
+                    final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
+                    final unreadCount =
+                        chat['unreadCount${currentUser.uid}'] as int? ?? 0;
+
+                    return Card(
+                      margin:
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      elevation: 0,
+                      child: ListTile(
+                        onTap: () {
+                          _navigateToChat(context, otherUser, chats[index].id);
+                        },
+                        leading: Hero(
+                          tag: 'chat-${otherUser.uid}',
+                          child: CircleAvatar(
+                            radius: 28,
+                            backgroundColor:
+                            Theme.of(context).primaryColor.withOpacity(0.1),
+                            backgroundImage: otherUser.photoUrl != null &&
+                                otherUser.photoUrl!.isNotEmpty
+                                ? CachedNetworkImageProvider(otherUser.photoUrl!)
+                            as ImageProvider
+                                : null,
+                            child: otherUser.photoUrl == null ||
+                                otherUser.photoUrl!.isEmpty
+                                ? Text(
+                              otherUser.name[0].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            )
+                                : null,
+                          ),
+                        ),
+                        title: Text(
+                          otherUser.name,
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: lastMessage != null
+                            ? Text(
+                          lastMessage,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: unreadCount > 0
+                                ? Colors.black87
+                                : Colors.grey[600],
+                            fontWeight: unreadCount > 0
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         )
                             : null,
-                      ),
-                    ),
-                    title: Text(
-                      otherUser.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: lastMessage != null
-                        ? Text(
-                      lastMessage,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: unreadCount > 0
-                            ? Colors.black87
-                            : Colors.grey[600],
-                        fontWeight: unreadCount > 0
-                            ? FontWeight.w500
-                            : FontWeight.normal,
-                      ),
-                    )
-                        : null,
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (lastMessageTime != null)
-                          Text(
-                            _formatMessageTime(lastMessageTime),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),),
-                        if (unreadCount > 0)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              unreadCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (lastMessageTime != null)
+                              Text(
+                                _formatMessageTime(lastMessageTime),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
                               ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                            if (unreadCount > 0)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).primaryColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  unreadCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             );

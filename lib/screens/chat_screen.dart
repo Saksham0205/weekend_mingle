@@ -10,6 +10,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/cloudinary_services.dart';
 import '../services/notification_service.dart';
+import '../services/user_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final UserModel otherUser;
@@ -29,15 +30,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _authService = AuthService();
-  bool _isLoading = false;
+  final _userService = UserService();
+  bool _isCheckingFriendship = true;
+  bool _isSendingMessage = false;
   bool _isTyping = false;
   bool _showEmoji = false;
   Timer? _typingTimer;
   final Map<String, AnimationController> _messageAnimations = {};
+  bool _isFriend = false;
 
   @override
   void initState() {
     super.initState();
+    _checkFriendshipStatus();
     _markMessagesAsRead();
     _messageController.addListener(_onTypingChanged);
   }
@@ -108,6 +113,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _checkFriendshipStatus() async {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) return;
+
+    final isFriend = await _userService.areFriends(
+      currentUser.uid,
+      widget.otherUser.uid,
+    );
+
+    setState(() {
+      _isFriend = isFriend;
+      _isCheckingFriendship = false;
+    });
+  }
+
   Future<void> _pickImage() async {
     try {
       final ImagePicker picker = ImagePicker();
@@ -144,7 +164,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _sendFile(File file, String type) async {
-    setState(() => _isLoading = true);
+    setState(() => _isSendingMessage = true);
 
     try {
       final url = await CloudinaryService.uploadFile(file);
@@ -160,7 +180,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         SnackBar(content: Text('Error uploading file: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isSendingMessage = false);
     }
   }
 
@@ -174,7 +194,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isSendingMessage = true);
 
     try {
       final chatDoc = await FirebaseFirestore.instance
@@ -233,7 +253,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         SnackBar(content: Text('Error sending message: $e')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isSendingMessage = false);
     }
   }
 
@@ -398,6 +418,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(child: Text('Not logged in')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         elevation: 1,
@@ -500,7 +527,40 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-      body: Column(
+      body: _isCheckingFriendship
+          ? const Center(child: CircularProgressIndicator())
+          : !_isFriend
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.lock_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Messaging not available',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You can only message users who have\naccepted your friend request.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      )
+          : Column(
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -524,7 +584,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 }
 
                 final messages = snapshot.data!.docs;
-                final currentUser = _authService.currentUser;
 
                 if (messages.isEmpty) {
                   return Center(
@@ -558,180 +617,79 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 }
 
                 return ListView.builder(
-                  reverse: true,
                   controller: _scrollController,
+                  reverse: true,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index].data();
-                    final messageId = messages[index].id;
-                    final isMe = message['senderId'] == currentUser?.uid;
-                    final timestamp = message['timestamp'] as Timestamp?;
-                    final reactions = (message['reactions'] as Map?)?.cast<String, String>() ?? {};
+                    final isCurrentUser =
+                        message['senderId'] == currentUser.uid;
 
-                    if (!_messageAnimations.containsKey(messageId)) {
-                      _messageAnimations[messageId] = AnimationController(
-                        vsync: this,
-                        duration: const Duration(milliseconds: 500),
-                      )..forward();
-                    }
-
-                    return SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(isMe ? 1 : -1, 0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: _messageAnimations[messageId]!,
-                        curve: Curves.easeOutQuad,
-                      )),
-                      child: GestureDetector(
-                        onLongPress: () => _showReactionPicker(messageId),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Column(
-                            crossAxisAlignment:
-                            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: isMe
-                                    ? MainAxisAlignment.end
-                                    : MainAxisAlignment.start,
-                                children: [
-                                  if (!isMe) ...[
-                                    CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: Theme.of(context)
-                                          .primaryColor
-                                          .withOpacity(0.1),
-                                      backgroundImage: widget.otherUser.photoUrl != null &&
-                                          widget.otherUser.photoUrl!.isNotEmpty
-                                          ? CachedNetworkImageProvider(
-                                          widget.otherUser.photoUrl!) as ImageProvider
-                                          : null,
-                                      child: widget.otherUser.photoUrl == null ||
-                                          widget.otherUser.photoUrl!.isEmpty
-                                          ? Text(
-                                        widget.otherUser.name[0].toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                          Theme.of(context).primaryColor,
-                                        ),
-                                      )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  Flexible(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isMe
-                                            ? Theme.of(context).primaryColor
-                                            : Colors.grey[200],
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: const Radius.circular(16),
-                                          topRight: const Radius.circular(16),
-                                          bottomLeft:
-                                          Radius.circular(isMe ? 16 : 4),
-                                          bottomRight:
-                                          Radius.circular(isMe ? 4 : 16),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          if (message['fileUrl'] != null) ...[
-                                            if (message['fileType'] == 'image')
-                                              ClipRRect(
-                                                borderRadius:
-                                                BorderRadius.circular(8),
-                                                child: CachedNetworkImage(
-                                                  imageUrl: message['fileUrl'],
-                                                  placeholder: (context, url) =>
-                                                  const Center(
-                                                    child:
-                                                    CircularProgressIndicator(),
-                                                  ),
-                                                  errorWidget:
-                                                      (context, url, error) =>
-                                                  const Icon(Icons.error),
-                                                ),
-                                              )
-                                            else
-                                              OutlinedButton.icon(
-                                                onPressed: () {
-                                                  // TODO: Download file
-                                                },
-                                                icon: const Icon(
-                                                    Icons.attach_file),
-                                                label: const Text('Download File'),
-                                              ),
-                                            const SizedBox(height: 8),
-                                          ],
-                                          if (message['text'] != null)
-                                            Text(
-                                              message['text'],
-                                              style: TextStyle(
-                                                color: isMe
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          if (timestamp != null) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _formatMessageTime(timestamp),
-                                              style: TextStyle(
-                                                color: isMe
-                                                    ? Colors.white.withOpacity(0.7)
-                                                    : Colors.grey[600],
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
+                    return Padding(
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: isCurrentUser
+                            ? MainAxisAlignment.end
+                            : MainAxisAlignment.start,
+                        children: [
+                          Container(
+                            constraints: BoxConstraints(
+                              maxWidth:
+                              MediaQuery.of(context).size.width *
+                                  0.7,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isCurrentUser
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey[200],
+                              borderRadius:
+                              BorderRadius.circular(20),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (message['text'] != null)
+                                  Text(
+                                    message['text'] as String,
+                                    style: TextStyle(
+                                      color: isCurrentUser
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                   ),
-                                  if (isMe) const SizedBox(width: 24),
-                                ],
-                              ),
-                              if (reactions.isNotEmpty)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    left: isMe ? 0 : 40,
-                                    right: isMe ? 24 : 0,
-                                    top: 4,
-                                  ),
-                                  child: Wrap(
-                                    spacing: 4,
-                                    children: reactions.entries
-                                        .map(
-                                          (e) => Tooltip(
-                                        message: e.key == currentUser?.uid
-                                            ? 'You'
-                                            : e.key == widget.otherUser.uid
-                                            ? widget.otherUser.name
-                                            : 'User',
-                                        child: Text(
-                                          e.value,
-                                          style: const TextStyle(fontSize: 16),
+                                if (message['fileUrl'] != null) ...[
+                                  if (message['fileType'] == 'image')
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: CachedNetworkImage(
+                                        imageUrl: message['fileUrl'] as String,
+                                        placeholder: (context, url) =>
+                                        const Center(
+                                          child: CircularProgressIndicator(),
                                         ),
+                                        errorWidget: (context, url, error) =>
+                                        const Icon(Icons.error),
                                       ),
                                     )
-                                        .toList(),
-                                  ),
-                                ),
-                            ],
+                                  else
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        // TODO: Handle file download
+                                      },
+                                      icon: const Icon(Icons.attach_file),
+                                      label: const Text('Download File'),
+                                    ),
+                                ],
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     );
                   },
@@ -740,89 +698,69 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
           ),
           Container(
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, -1),
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            child: Column(
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.attach_file),
-                      color: Theme.of(context).primaryColor,
-                      onPressed: _showAttachmentOptions,
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _showEmoji
-                                  ? Icons.keyboard
-                                  : Icons.emoji_emotions_outlined,
-                            ),
-                            onPressed: () {
-                              setState(() => _showEmoji = !_showEmoji);
-                            },
-                          ),
-                        ),
-                        textCapitalization: TextCapitalization.sentences,
-                        maxLines: null,
+                IconButton(
+                  onPressed: _showAttachmentOptions,
+                  icon: Icon(
+                    Icons.attach_file,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: _isLoading
-                          ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      )
-                          : const Icon(Icons.send),
-                      color: Theme.of(context).primaryColor,
-                      onPressed:
-                      _isLoading ? null : () => _sendMessage(text: _messageController.text),
-                    ),
-                  ],
-                ),
-                if (_showEmoji)
-                  SizedBox(
-                    height: 250,
-                    child: EmojiPicker(
-                      onEmojiSelected: (category, emoji) {
-                        _messageController
-                          ..text += emoji.emoji
-                          ..selection = TextSelection.fromPosition(
-                            TextPosition(offset: _messageController.text.length),
-                          );
-                      },
-                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    onSubmitted: (text) {
+                      if (text.isNotEmpty) {
+                        _sendMessage(text: text);
+                      }
+                    },
                   ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _isSendingMessage
+                      ? null
+                      : () => _sendMessage(text: _messageController.text),
+                  icon: _isSendingMessage
+                      ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                      : Icon(
+                    Icons.send_rounded,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
               ],
             ),
           ),
