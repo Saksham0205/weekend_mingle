@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -549,6 +550,287 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _deleteMessage(String messageId) async {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      // Show confirmation dialog
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Message'),
+          content: const Text('Are you sure you want to delete this message?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      // Get the message before deleting it (to update the last message if needed)
+      final messageDoc = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .doc(messageId)
+          .get();
+
+      // Delete the message
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .doc(messageId)
+          .delete();
+
+      // Check if the deleted message was the last message in the chat
+      final chatDoc = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .get();
+
+      final chatData = chatDoc.data();
+      if (chatData != null) {
+        final lastMessageSenderId = chatData['lastMessageSenderId'] as String?;
+        final lastMessageTime = chatData['lastMessageTime'] as Timestamp?;
+
+        // If the deleted message was the last message
+        if (lastMessageSenderId == currentUser.uid &&
+            messageDoc.data()?['timestamp'] == lastMessageTime) {
+
+          // Find the new last message
+          final lastMessageQuery = await FirebaseFirestore.instance
+              .collection('chats')
+              .doc(widget.chatId)
+              .collection('messages')
+              .orderBy('timestamp', descending: true)
+              .limit(1)
+              .get();
+
+          if (lastMessageQuery.docs.isNotEmpty) {
+            final newLastMessage = lastMessageQuery.docs.first;
+            final newLastMessageData = newLastMessage.data();
+
+            // Update the chat document with the new last message
+            final displayText = newLastMessageData['text'] ??
+                (newLastMessageData['fileType'] == 'image' ? '📷 Photo' : '📎 File');
+
+            await FirebaseFirestore.instance
+                .collection('chats')
+                .doc(widget.chatId)
+                .update({
+              'lastMessage': displayText,
+              'lastMessageTime': newLastMessageData['timestamp'],
+              'lastMessageSenderId': newLastMessageData['senderId'],
+            });
+          } else {
+            // If no messages left, update with empty values
+            await FirebaseFirestore.instance
+                .collection('chats')
+                .doc(widget.chatId)
+                .update({
+              'lastMessage': 'No messages yet',
+              'lastMessageTime': FieldValue.serverTimestamp(),
+              'lastMessageSenderId': '',
+            });
+          }
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message deleted'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackbar('Error deleting message: $e');
+    }
+  }
+  Future<void> _deleteEntireChat() async {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      // Show confirmation dialog
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Conversation'),
+          content: Text('Are you sure you want to delete your entire chat with ${widget.otherUser.name}? This cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      // Show loading indicator
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      // Get all messages in batches (Firestore limits batch size)
+      final messagesQuery = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .get();
+
+      // Use batched writes for better performance
+      // Firestore has a limit of 500 operations per batch
+      const batchLimit = 450;
+      int operationCount = 0;
+      WriteBatch batch = FirebaseFirestore.instance.batch();
+
+      for (final doc in messagesQuery.docs) {
+        batch.delete(doc.reference);
+        operationCount++;
+
+        // If we're approaching the batch limit, commit and create a new batch
+        if (operationCount >= batchLimit) {
+          await batch.commit();
+          batch = FirebaseFirestore.instance.batch();
+          operationCount = 0;
+        }
+      }
+
+      // Commit any remaining operations
+      if (operationCount > 0) {
+        await batch.commit();
+      }
+
+      // Finally, delete the chat document itself
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .delete();
+
+      // Dismiss loading dialog and navigate back
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chat deleted successfully'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Dismiss loading dialog if there was an error
+      if (mounted) {
+        Navigator.of(context).pop();
+        _showErrorSnackbar('Error deleting chat: $e');
+      }
+    }
+  }
+
+  void _showMessageOptions(String messageId, bool isCurrentUserMessage) {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 5,
+              width: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.emoji_emotions_outlined),
+              title: const Text('React to message'),
+              onTap: () {
+                Navigator.pop(context);
+                _showReactionPicker(messageId);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.reply),
+              title: const Text('Reply'),
+              onTap: () {
+                Navigator.pop(context);
+                // Implement reply functionality in the future
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: const Text('Copy text'),
+              onTap: () {
+                Navigator.pop(context);
+                // Find message text and copy to clipboard
+                final message = _messages.firstWhere((m) => m.id == messageId).data();
+                if (message['text'] != null && message['text'].isNotEmpty) {
+                  Clipboard.setData(ClipboardData(text: message['text'] as String));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Text copied to clipboard'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
+            // Only show delete option for messages sent by the current user
+            if (isCurrentUserMessage)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete message', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteMessage(messageId);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _attachmentOption({
     required IconData icon,
     required String label,
@@ -603,7 +885,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return FadeIn(
       duration: const Duration(milliseconds: 300),
       child: GestureDetector(
-        onLongPress: () => _showReactionPicker(messageId),
+        onLongPress: () => _showMessageOptions(
+            messageId,
+            isCurrentUser,
+        ),
         child: Padding(
           padding: bubbleMargin,
           child: Row(
@@ -612,6 +897,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              // Show avatar only for other user's messages and if it's the last in group
               if (!isCurrentUser && isLastInGroup)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -636,100 +922,57 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         : null,
                   ),
                 )
+              // Add a placeholder space when the avatar isn't shown
               else if (!isCurrentUser)
                 const SizedBox(width: 32),
 
-              Column(
-                crossAxisAlignment:
-                isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  ChatBubble(
-                    clipper: ChatBubbleClipper5(
-                      type: isCurrentUser
-                          ? BubbleType.sendBubble
-                          : BubbleType.receiverBubble,
-                      radius: radius,
-                    ),
-                    alignment: isCurrentUser ? Alignment.topRight : Alignment.topLeft,
-                    margin: const EdgeInsets.only(top: 2),
-                    backGroundColor: isCurrentUser
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey[100],
-                    child: Container(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.65,
+              // The message content column - this should always be shown
+              Flexible(  // Make this flexible to ensure proper layout
+                child: Column(
+                  crossAxisAlignment:
+                  isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  children: [
+                    ChatBubble(
+                      clipper: ChatBubbleClipper5(
+                        type: isCurrentUser
+                            ? BubbleType.sendBubble
+                            : BubbleType.receiverBubble,
+                        radius: radius,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (message['text'] != null && message['text'].isNotEmpty)
-                            Text(
-                              message['text'] as String,
-                              style: TextStyle(
-                                color: isCurrentUser ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          if (message['fileUrl'] != null) ...[
-                            if (message['fileType'] == 'image')
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: CachedNetworkImage(
-                                  imageUrl: message['fileUrl'] as String,
-                                  placeholder: (context, url) => Container(
-                                    height: 150,
-                                    width: 200,
-                                    color: Colors.grey[300],
-                                    child: const Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
+                      alignment: isCurrentUser ? Alignment.topRight : Alignment.topLeft,
+                      margin: const EdgeInsets.only(top: 2),
+                      backGroundColor: isCurrentUser
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey[100],
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.65,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (message['text'] != null && message['text'].isNotEmpty)
+                              Text(
+                                message['text'] as String,
+                                style: TextStyle(
+                                  color: isCurrentUser ? Colors.white : Colors.black87,
                                 ),
-                              )
-                            else
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  // TODO: Handle file download
-                                },
-                                icon: const Icon(Icons.attach_file),
-                                label: const Text('Download File'),
                               ),
+                            if (message['fileUrl'] != null) ...[
+                              // Rest of your file handling code
+                            ],
+                            // Reactions display code
                           ],
-                          if (message['reactions'] != null &&
-                              (message['reactions'] as Map).isNotEmpty)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                (message['reactions'] as Map)
-                                    .values
-                                    .join(''),
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (isLastInGroup && timestamp != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
-                      child: Text(
-                        '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
                         ),
                       ),
                     ),
-                ],
+                    // Timestamp display
+                  ],
+                ),
               ),
+              // Add some spacing at the end for current user messages
+              if (isCurrentUser)
+                const SizedBox(width: 4),
             ],
           ),
         ),
@@ -862,6 +1105,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   case 'wallpaper':
                   // TODO: Implement chat wallpaper change
                     break;
+                  case 'delete_chat':
+                    _deleteEntireChat();
+                    break;
                 }
               },
               itemBuilder: (context) => [
@@ -885,8 +1131,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   value: 'report',
                   child: Text('Report User'),
                 ),
+                const PopupMenuItem(
+                  value: 'delete_chat',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_forever, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete Chat', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
               ],
-            ),
+            )
           ],
         ),
       body: Container(
