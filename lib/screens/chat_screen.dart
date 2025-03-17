@@ -890,13 +890,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ],
         ),
       body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/chat_bg.png'),
-            fit: BoxFit.cover,
-            opacity: 0.5,
-          ),
-        ),
         child: _isCheckingFriendship
             ? const Center(child: CircularProgressIndicator())
             : !_isFriend

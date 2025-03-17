@@ -2,11 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import '../models/user_model.dart';
 import '../providers/user_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import '../models/user_model.dart';
 import 'home_screen.dart';
+import 'chat_screen.dart';
 
 class ChatsTab extends StatefulWidget {
   const ChatsTab({super.key});
@@ -70,12 +71,15 @@ class _ChatsTabState extends State<ChatsTab> {
                     }
                     // Access the parent HomeScreen state to switch tabs
                     // This is safer than using DefaultTabController which might not be available
-                    final scaffoldContext = ScaffoldMessenger.of(context).context;
+                    final scaffoldContext =
+                        ScaffoldMessenger.of(context).context;
                     if (scaffoldContext != null) {
                       // Set the index to 1 (Connections tab)
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const HomeScreen(initialTabIndex: 1)),
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const HomeScreen(initialTabIndex: 1)),
                       );
                     }
                   },
@@ -91,14 +95,15 @@ class _ChatsTabState extends State<ChatsTab> {
           itemBuilder: (context, index) {
             final chat = snapshot.data!.docs[index];
             final chatData = chat.data() as Map<String, dynamic>;
-            final participants = List<String>.from(chatData['participants'] ?? []);
+            final participants =
+                List<String>.from(chatData['participants'] ?? []);
 
             if (participants.isEmpty || participants.length < 2) {
               return const SizedBox();
             }
 
             final otherUserId = participants.firstWhere(
-                  (id) => id != userProvider.user!.uid,
+              (id) => id != userProvider.user!.uid,
               orElse: () => '',
             );
 
@@ -113,12 +118,17 @@ class _ChatsTabState extends State<ChatsTab> {
                   return const SizedBox();
                 }
 
-                final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                final userData =
+                    userSnapshot.data!.data() as Map<String, dynamic>?;
                 if (userData == null) return const SizedBox();
 
-                final lastMessage = chatData['lastMessage'] as String? ?? 'No messages yet';
-                final lastMessageTime = chatData['lastMessageTime'] as Timestamp?;
-                final unreadCount = chatData['unreadCount${userProvider.user!.uid}'] as int? ?? 0;
+                final lastMessage =
+                    chatData['lastMessage'] as String? ?? 'No messages yet';
+                final lastMessageTime =
+                    chatData['lastMessageTime'] as Timestamp?;
+                final unreadCount =
+                    chatData['unreadCount${userProvider.user!.uid}'] as int? ??
+                        0;
 
                 return ListTile(
                   leading: CircleAvatar(
@@ -127,9 +137,10 @@ class _ChatsTabState extends State<ChatsTab> {
                         : null,
                     child: userData['photoUrl'] == null
                         ? Text(
-                      (userData['name'] as String? ?? 'A')[0].toUpperCase(),
-                      style: const TextStyle(fontSize: 20),
-                    )
+                            (userData['name'] as String? ?? 'A')[0]
+                                .toUpperCase(),
+                            style: const TextStyle(fontSize: 20),
+                          )
                         : null,
                   ),
                   title: Text(userData['name'] ?? 'Anonymous'),
@@ -167,16 +178,28 @@ class _ChatsTabState extends State<ChatsTab> {
                         ),
                     ],
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatScreen(
-                          chatId: chat.id,
-                          otherUserId: otherUserId,
+                  onTap: () async {
+                    // Get user data from Firestore
+                    final userDoc = await _firestore
+                        .collection('users')
+                        .doc(otherUserId)
+                        .get();
+
+                    if (userDoc.exists && userDoc.data() != null) {
+                      // Create UserModel using the proper constructor
+                      final otherUser =
+                          UserModel.fromMap(userDoc.data()!, otherUserId);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                            chatId: chat.id,
+                            otherUser: otherUser,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                 );
               },
@@ -284,9 +307,9 @@ class ChatSearchDelegate extends SearchDelegate<String> {
                     : null,
                 child: userData['photoUrl'] == null
                     ? Text(
-                  (userData['name'] as String? ?? 'A')[0].toUpperCase(),
-                  style: const TextStyle(fontSize: 20),
-                )
+                        (userData['name'] as String? ?? 'A')[0].toUpperCase(),
+                        style: const TextStyle(fontSize: 20),
+                      )
                     : null,
               ),
               title: Text(userData['name'] ?? 'Anonymous'),
@@ -299,13 +322,16 @@ class ChatSearchDelegate extends SearchDelegate<String> {
                   userData['uid'],
                 );
 
+                // Create a UserModel from the userData
+                final otherUser = UserModel.fromMap(userData, userData['uid']);
+
                 if (context.mounted) {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ChatScreen(
                         chatId: chatDoc.id,
-                        otherUserId: userData['uid'],
+                        otherUser: otherUser,
                       ),
                     ),
                   );
@@ -319,10 +345,10 @@ class ChatSearchDelegate extends SearchDelegate<String> {
   }
 
   Future<DocumentReference> _createOrGetChat(
-      BuildContext context,
-      String currentUserId,
-      String otherUserId,
-      ) async {
+    BuildContext context,
+    String currentUserId,
+    String otherUserId,
+  ) async {
     // Check if chat already exists
     final querySnapshot = await FirebaseFirestore.instance
         .collection('chats')
@@ -346,372 +372,5 @@ class ChatSearchDelegate extends SearchDelegate<String> {
     });
 
     return chatDoc;
-  }
-}
-
-class ChatScreen extends StatefulWidget {
-  final String chatId;
-  final String otherUserId;
-
-  const ChatScreen({
-    super.key,
-    required this.chatId,
-    required this.otherUserId,
-  });
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ScrollController _scrollController = ScrollController();
-  bool _isTyping = false;
-  Timer? _typingTimer;
-  StreamSubscription? _typingSubscription;
-  bool _otherUserTyping = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _markAsRead();
-    _setupTypingListener();
-  }
-
-  void _setupTypingListener() {
-    _typingSubscription = _firestore
-        .collection('chats')
-        .doc(widget.chatId)
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists) {
-        final data = snapshot.data();
-        if (data != null) {
-          setState(() {
-            _otherUserTyping = data['${widget.otherUserId}_typing'] ?? false;
-          });
-        }
-      }
-    });
-  }
-
-  Future<void> _markAsRead() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.user == null) return;
-
-    await _firestore.collection('chats').doc(widget.chatId).update({
-      'unreadCount${userProvider.user!.uid}': 0,
-    });
-  }
-
-  void _updateTypingStatus(bool isTyping) {
-    _typingTimer?.cancel();
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.user == null) return;
-
-    _firestore.collection('chats').doc(widget.chatId).update({
-      '${userProvider.user!.uid}_typing': isTyping,
-    });
-
-    if (isTyping) {
-      _typingTimer = Timer(const Duration(seconds: 3), () {
-        _firestore.collection('chats').doc(widget.chatId).update({
-          '${userProvider.user!.uid}_typing': false,
-        });
-      });
-    }
-  }
-
-  Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
-
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.user == null) return;
-
-    final message = _messageController.text.trim();
-    _messageController.clear();
-    _updateTypingStatus(false);
-
-    try {
-      final batch = _firestore.batch();
-      final messageRef = _firestore
-          .collection('chats')
-          .doc(widget.chatId)
-          .collection('messages')
-          .doc();
-
-      batch.set(messageRef, {
-        'senderId': userProvider.user!.uid,
-        'message': message,
-        'timestamp': FieldValue.serverTimestamp(),
-        'type': 'text',
-      });
-
-      batch.update(_firestore.collection('chats').doc(widget.chatId), {
-        'lastMessage': message,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCount${widget.otherUserId}': FieldValue.increment(1),
-        '${userProvider.user!.uid}_typing': false,
-      });
-
-      await batch.commit();
-
-      // Scroll to bottom
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending message: $e')),
-        );
-      }
-    }
-  }
-
-  Widget _buildMessageList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('chats')
-          .doc(widget.chatId)
-          .collection('messages')
-          .orderBy('timestamp', descending: true)
-          .limit(50)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final messages = snapshot.data?.docs ?? [];
-
-        return ListView.builder(
-          controller: _scrollController,
-          reverse: true,
-          padding: const EdgeInsets.all(16),
-          itemCount: messages.length,
-          itemBuilder: (context, index) {
-            final messageData = messages[index].data() as Map<String, dynamic>;
-            final isMe = messageData['senderId'] == Provider.of<UserProvider>(context).user?.uid;
-            final message = messageData['message'] as String? ?? '';
-            final timestamp = messageData['timestamp'] as Timestamp?;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  if (!isMe) const SizedBox(width: 40),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isMe ? Theme.of(context).primaryColor : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            message,
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black,
-                            ),
-                          ),
-                          if (timestamp != null)
-                            Text(
-                              timeago.format(timestamp.toDate()),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isMe ? Colors.white70 : Colors.black54,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (isMe) const SizedBox(width: 40),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: _firestore.collection('users').doc(widget.otherUserId).snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final userData = snapshot.data!.data() as Map<String, dynamic>?;
-        if (userData == null) {
-          return const Scaffold(
-            body: Center(child: Text('User not found')),
-          );
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            titleSpacing: 0,
-            title: Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: userData['photoUrl'] != null
-                      ? CachedNetworkImageProvider(userData['photoUrl'])
-                      : null,
-                  child: userData['photoUrl'] == null
-                      ? Text(
-                    (userData['name'] as String? ?? 'A')[0].toUpperCase(),
-                    style: const TextStyle(fontSize: 20),
-                  )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(userData['name'] ?? 'Anonymous'),
-                    if (_otherUserTyping)
-                      Text(
-                        'typing...',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.block),
-                          title: const Text('Block User'),
-                          onTap: () {
-                            // Implement block functionality
-                          },
-                        ),
-                        ListTile(
-                          leading: const Icon(Icons.report),
-                          title: const Text('Report User'),
-                          onTap: () {
-                            // Implement report functionality
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              Expanded(child: _buildMessageList()),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.attach_file),
-                      onPressed: () {
-                        // Implement file attachment
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (context) => Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.image),
-                                title: const Text('Image'),
-                                onTap: () {
-                                  // Implement image sending
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.camera_alt),
-                                title: const Text('Camera'),
-                                onTap: () {
-                                  // Implement camera capture
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.insert_drive_file),
-                                title: const Text('Document'),
-                                onTap: () {
-                                  // Implement document sending
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          border: InputBorder.none,
-                        ),
-                        onChanged: (value) {
-                          _updateTypingStatus(value.isNotEmpty);
-                        },
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: _sendMessage,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    _typingTimer?.cancel();
-    _typingSubscription?.cancel();
-    super.dispose();
   }
 }

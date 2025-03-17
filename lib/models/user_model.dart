@@ -115,8 +115,18 @@ class UserModel {
       location: data['location'],
       company: data['company'],
       locationName: data['locationName'],
-      lastActive: data['lastActive'] != null ? DateTime.parse(data['lastActive']) : null,
-      createdAt: DateTime.parse(data['createdAt']),
+      // Handle Timestamp or String for lastActive
+      lastActive: data['lastActive'] != null
+          ? data['lastActive'] is Timestamp
+          ? (data['lastActive'] as Timestamp).toDate()
+          : data['lastActive'] is String
+          ? DateTime.parse(data['lastActive'])
+          : null
+          : null,
+      // Handle Timestamp or String for createdAt
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(data['createdAt'] ?? DateTime.now().toIso8601String()),
       weekendInterests: (data['weekendInterests'] != null) ? List<String>.from(data['weekendInterests'] as List<dynamic>) : [],
       availability: Map<String, bool>.from(data['availability'] ?? {}),
       industry: data['industry'],
