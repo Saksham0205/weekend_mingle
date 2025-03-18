@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildAppBar(BuildContext context, UserModel? currentUser) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, UserModel? currentUser) {
     return AppBar(
       elevation: 0,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: CircleAvatar(
             backgroundImage: currentUser?.photoUrl != null
                 ? NetworkImage(currentUser!.photoUrl!)
-                : const AssetImage('assets/images/default_profile.png') as ImageProvider,
+                : const AssetImage('assets/images/default_profile.jpg') as ImageProvider,
             radius: 15,
           ),
           onPressed: () {
@@ -512,64 +512,64 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
           const SizedBox(height: 16),
-      CircleAvatar(
-        radius: 45,
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-        backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
-            ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-            : null,
-        child: user.photoUrl == null || user.photoUrl!.isEmpty
-            ? Text(
-          user.name[0].toUpperCase(),
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
+          CircleAvatar(
+            radius: 45,
+            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+            backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
+                : null,
+            child: user.photoUrl == null || user.photoUrl!.isEmpty
+                ? Text(
+              user.name[0].toUpperCase(),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            )
+                : null,
           ),
-        )
-            : null,
-      ),
-      const SizedBox(height: 12),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(
-          user.name,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              user.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      const SizedBox(height: 4),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(
-          '${user.profession ?? 'Professional'} | ${user.company ?? 'Weekend Mingler'}',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${user.profession ?? 'Professional'} | ${user.company ?? 'Weekend Mingler'}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      const SizedBox(height: 16),
-      ElevatedButton.icon(
-        onPressed: () => _sendFriendRequest(context, currentUser.uid, user),
-        icon: const Icon(Icons.person_add, size: 16),
-        label: const Text('Connect'),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          textStyle: const TextStyle(fontSize: 14),
-        ),
-      ),SizedBox(height: 12),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _sendFriendRequest(context, currentUser.uid, user),
+            icon: const Icon(Icons.person_add, size: 16),
+            label: const Text('Connect'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              textStyle: const TextStyle(fontSize: 14),
+            ),
+          ),SizedBox(height: 12),
 
         ],
       ),
@@ -1128,8 +1128,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
     return Scaffold(
-      appBar: _buildAppBar(context, _authService.currentUser),
+      appBar: _buildAppBar(context, userProvider.user),
       body: Stack(
         children: [
           _currentIndex == 0 ? _buildMainFeed() : _getScreen(),

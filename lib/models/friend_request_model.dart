@@ -15,13 +15,10 @@ class FriendRequestModel {
     required this.createdAt,
   });
 
-  factory FriendRequestModel.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> snapshot,
-      SnapshotOptions? options,
-      ) {
-    final data = snapshot.data()!;
+  factory FriendRequestModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     return FriendRequestModel(
-      id: snapshot.id,
+      id: doc.id,
       senderId: data['senderId'],
       receiverId: data['receiverId'],
       status: data['status'],

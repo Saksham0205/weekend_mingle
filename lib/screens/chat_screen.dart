@@ -785,9 +785,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               onTap: () {
                 Navigator.pop(context);
                 // Find message text and copy to clipboard
-                final message = _messages.firstWhere((m) => m.id == messageId).data;
-                if (message['text'] != null && message['text'].isNotEmpty) {
-                  Clipboard.setData(ClipboardData(text: message['text'] as String));
+                final message = _messages.firstWhere((m) => m.id == messageId);
+                if (message.content.isNotEmpty) {
+                  Clipboard.setData(ClipboardData(text: message.content));
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Text copied to clipboard'),
@@ -1200,29 +1200,31 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 padding: const EdgeInsets.all(16),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
-                  final message = _messages[index].data;
-                  final messageId = _messages[index].id;
-                  final isCurrentUser = message['senderId'] == currentUser.uid;
-                  final timestamp = message['timestamp'] != null
-                      ? (message['timestamp'] as Timestamp).toDate()
-                      : null;
+                  final message = _messages[index];
+                  final messageId = message.id;
+                  final isCurrentUser = message.senderId == currentUser.uid;
+                  final timestamp = message.timestamp;
 
                   // Determine if this message is part of a group
                   bool isFirstInGroup = true;
                   bool isLastInGroup = true;
 
                   if (index > 0) {
-                    final prevMessage = _messages[index - 1].data;
-                    isFirstInGroup = prevMessage['senderId'] != message['senderId'];
+                    final prevMessage = _messages[index - 1];
+                    isFirstInGroup = prevMessage.senderId != message.senderId;
                   }
 
                   if (index < _messages.length - 1) {
-                    final nextMessage = _messages[index + 1].data;
-                    isLastInGroup = nextMessage['senderId'] != message['senderId'];
+                    final nextMessage = _messages[index + 1];
+                    isLastInGroup = nextMessage.senderId != message.senderId;
                   }
 
                   return _buildMessageBubble(
-                    message,
+                    {
+                      'text': message.content,
+                      'fileUrl': message.imageUrl,
+                      'senderId': message.senderId
+                    },
                     isCurrentUser,
                     isFirstInGroup,
                     isLastInGroup,
