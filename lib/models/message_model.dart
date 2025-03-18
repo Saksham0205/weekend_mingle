@@ -41,8 +41,8 @@ class Message {
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
+  Map<String, dynamic> get data => {
+
       'senderId': senderId,
       'senderName': senderName,
       'senderPhotoUrl': senderPhotoUrl,
@@ -52,8 +52,7 @@ class Message {
       'isRead': isRead,
       'type': type,
       'readBy': readBy,
-    };
-  }
+  };
 
   Message copyWith({
     String? id,

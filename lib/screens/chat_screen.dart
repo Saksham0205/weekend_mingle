@@ -785,7 +785,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               onTap: () {
                 Navigator.pop(context);
                 // Find message text and copy to clipboard
-                final message = _messages.firstWhere((m) => m.id == messageId).data();
+                final message = _messages.firstWhere((m) => m.id == messageId).data;
                 if (message['text'] != null && message['text'].isNotEmpty) {
                   Clipboard.setData(ClipboardData(text: message['text'] as String));
                   ScaffoldMessenger.of(context).showSnackBar(
