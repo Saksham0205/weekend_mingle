@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -16,10 +17,15 @@ class AuthService {
       String password,
       ) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Update FCM token
+      await NotificationService.updateToken(userCredential.user!.uid);
+
+      return userCredential;
     } catch (e) {
       rethrow;
     }
@@ -45,6 +51,9 @@ class AuthService {
         email,
         profession,
       );
+
+      // Update FCM token
+      await NotificationService.updateToken(userCredential.user!.uid);
 
       return userCredential;
     } catch (e) {
@@ -76,6 +85,9 @@ class AuthService {
         '', // Profession will need to be updated later
       );
 
+      // Update FCM token
+      await NotificationService.updateToken(userCredential.user!.uid);
+
       return userCredential;
     } catch (e) {
       rethrow;
@@ -104,7 +116,19 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
+    try {
+      // Clear FCM token on sign out
+      final uid = currentUser?.uid;
+      if (uid != null) {
+        await _firestore.collection('users').doc(uid).update({
+          'fcmToken': null,
+        });
+      }
+
+      await _googleSignIn.signOut();
+      await _auth.signOut();
+    } catch (e) {
+      rethrow;
+    }
   }
 }

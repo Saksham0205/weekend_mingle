@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:weekend_mingle/screens/chat_screen.dart';
 import '../models/user_model.dart';
-import '../models/weekend_activity_model.dart';
 import '../services/auth_service.dart';
 import '../services/friend_service.dart';
 import '../services/location_service.dart';
@@ -22,6 +21,9 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/intl.dart';
 import 'package:badges/badges.dart' as badges;
 import '../models/post_model.dart';
+import '../models/weekend_activity_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/stories_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -87,167 +89,168 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  PreferredSizeWidget _buildTopNavigationBar() {
-    final userProvider = Provider.of<UserProvider>(context);
-    final notificationProvider = Provider.of<app_notifications.NotificationProvider>(context);
-    final user = userProvider.user;
-
+  Widget _buildAppBar(BuildContext context, UserModel? currentUser) {
     return AppBar(
       elevation: 0,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      title: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() => _currentIndex = 4); // Switch to profile tab
-            },
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              backgroundImage: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
-                  ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                  : null,
-              child: user?.photoUrl == null || user!.photoUrl!.isEmpty
-                  ? Text(
-                user!.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
-              )
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search people, plans, or groups...',
-                  hintStyle: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.grey[500],
-                    size: 18,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 12,
-                  ),
-                ),
-                onSubmitted: (query) {
-                  // TODO: Implement search functionality
-                },
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: badges.Badge(
-              showBadge: notificationProvider.unreadCount > 0,
-              badgeContent: Text(
-                notificationProvider.unreadCount.toString(),
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.white,
-                ),
-              ),
-              child: const Icon(Icons.notifications_outlined),
-            ),
-            onPressed: () {
-              setState(() {
-                _showNotifications = !_showNotifications;
-              });
-              if (_showNotifications) {
-                final userProvider = Provider.of<UserProvider>(context, listen: false);
-                if (userProvider.user?.uid != null) {
-                  notificationProvider.markAllAsRead(userProvider.user!.uid);
-                }
-              }
-            },
-          ),
-        ],
+      title: Text(
+        'Weekend Mingle',
+        style: TextStyle(
+          color: Theme.of(context).primaryColor,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            Navigator.pushNamed(context, '/search');
+          },
+        ),
+        Consumer<app_notifications.NotificationProvider>(
+          builder: (context, notificationProvider, child) {
+            final hasUnread = notificationProvider.hasUnreadNotifications;
+
+            return IconButton(
+              icon: badges.Badge(
+                showBadge: hasUnread,
+                badgeContent: Text(
+                  '',
+                  style: TextStyle(color: Colors.white, fontSize: 10),
+                ),
+                badgeStyle: badges.BadgeStyle(
+                  badgeColor: Colors.red,
+                ),
+                child: Icon(Icons.notifications),
+              ),
+              onPressed: () {
+                Navigator.pushNamed(context, '/notifications');
+              },
+            );
+          },
+        ),
+        IconButton(
+          icon: CircleAvatar(
+            backgroundImage: currentUser?.photoUrl != null
+                ? NetworkImage(currentUser!.photoUrl!)
+                : const AssetImage('assets/images/default_profile.png') as ImageProvider,
+            radius: 15,
+          ),
+          onPressed: () {
+            Navigator.pushNamed(context, '/profile');
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildMainFeed() {
-    return Consumer<feed.FeedProvider>(
-      builder: (context, feedProvider, child) {
-        if (feedProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Stream<List<Widget>> _buildMainFeed() async* {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      yield [
+        Center(
+          child: Text("You must be logged in to view the feed"),
+        )
+      ];
+      return;
+    }
 
-        if (feedProvider.error != null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Error: ${feedProvider.error}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final userProvider = Provider.of<UserProvider>(context, listen: false);
-                    feedProvider.initializeFeed(userProvider.user?.uid);
-                  },
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        }
+    final currentUserDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            final userProvider = Provider.of<UserProvider>(context, listen: false);
-            feedProvider.initializeFeed(userProvider.user?.uid);
-          },
-          child: ListView(
+    if (!currentUserDoc.exists) {
+      yield [
+        Center(
+          child: Text("User profile not found"),
+        )
+      ];
+      return;
+    }
+
+    final currentUser = UserModel.fromFirestore(currentUserDoc);
+    final currentUserName = currentUser.name ?? "Anonymous";
+
+    if (currentUser == null) {
+      yield [
+        Center(
+          child: Text("User profile not found"),
+        )
+      ];
+      return;
+    }
+
+    final feedProvider = Provider.of<feed.FeedProvider>(context, listen: false);
+    if (feedProvider.isLoading) {
+      yield [
+        const Center(child: CircularProgressIndicator()),
+      ];
+      return;
+    }
+
+    if (feedProvider.error != null) {
+      yield [
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildStoriesSection(),
-              _buildRecommendedPeopleSection(),
-              _buildTrendingWeekendPlansSection(),
-              _buildExploreEventsSection(),
-              _buildActiveUsersSection(),
-              ...feedProvider.posts.map((feedPost) => _buildPostCard(
-                  Post(
-                    id: feedPost.id,
-                    userId: feedPost.userId,
-                    userName: feedPost.userName,
-                    userPhotoUrl: feedPost.userPhotoUrl,
-                    content: feedPost.content,
-                    imageUrl: feedPost.imageUrl,
-                    timestamp: feedPost.timestamp,
-                    likes: feedPost.likes,
-                    comments: feedPost.comments.map((comment) =>
-                        Comment(
-                          userId: comment.userId,
-                          userName: comment.userName,
-                          userPhotoUrl: comment.userPhotoUrl,
-                          content: comment.content,
-                          timestamp: comment.timestamp,
-                        )
-                    ).toList(),
-                  )
-              )).toList(),
+              Text(
+                'Error: ${feedProvider.error}',
+                style: const TextStyle(color: Colors.red),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final userProvider = Provider.of<UserProvider>(context, listen: false);
+                  feedProvider.initializeFeed(userProvider.user?.uid);
+                },
+                child: const Text('Retry'),
+              ),
             ],
           ),
-        );
-      },
-    );
+        ),
+      ];
+      return;
+    }
+
+    yield [
+      RefreshIndicator(
+        onRefresh: () async {
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          feedProvider.initializeFeed(userProvider.user?.uid);
+        },
+        child: ListView(
+          children: [
+            StoriesWidget(),
+            _buildRecommendedPeopleSection(),
+            _buildTrendingWeekendPlansSection(),
+            _buildExploreEventsSection(),
+            _buildActiveUsersSection(),
+            ...feedProvider.posts.map((feedPost) => _buildPostCard(
+                Post(
+                  id: feedPost.id,
+                  userId: feedPost.userId,
+                  userName: feedPost.userName,
+                  userPhotoUrl: feedPost.userPhotoUrl,
+                  content: feedPost.content,
+                  imageUrl: feedPost.imageUrl,
+                  timestamp: feedPost.timestamp,
+                  likes: feedPost.likes,
+                  comments: feedPost.comments.map((comment) =>
+                      Comment(
+                        userId: comment.userId,
+                        userName: comment.userName,
+                        userPhotoUrl: comment.userPhotoUrl,
+                        content: comment.content,
+                        timestamp: comment.timestamp,
+                      )
+                  ).toList(),
+                )
+            )).toList(),
+          ],
+        ),
+      ),
+    ];
   }
 
   // 1. Stories & Quick Updates Section
@@ -1170,7 +1173,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildTopNavigationBar(),
+      appBar: _buildAppBar(context, _authService.currentUser),
       body: Stack(
         children: [
           _currentIndex == 0 ? _buildMainFeed() : _getScreen(),
@@ -2058,20 +2061,33 @@ class _HomeScreenState extends State<HomeScreen> {
     Row(
     mainAxisAlignment: MainAxisAlignment.spaceAround,
     children: [
-      IconButton(
-        icon: Icon(
-          post.likes.contains(currentUser?.uid)
-              ? Icons.favorite
-              : Icons.favorite_border,
-        ),
-        color: post.likes.contains(currentUser?.uid) ? Colors.red : null,
-        onPressed: () {
-          if (currentUser != null) {
-            Provider.of<feed.FeedProvider>(context, listen: false)
-                .likePost(post.id, currentUser.uid);
-          }
-        },
-      ),
+    IconButton(
+    icon: Icon(
+    post.likes.contains(currentUser?.uid)
+    ? Icons.favorite
+        : Icons.favorite_border,
+    color: post.likes.contains(currentUser?.uid)
+    ? Colors.red
+        : null,
+    onPressed: () {
+    if (currentUser != null) {
+    Provider.of<feed.FeedProvider>(context, listen: false)
+        .likePost(post.id, currentUser.uid);
+    }
+    },
+    ),
+    IconButton(
+    icon: const Icon(Icons.comment_outlined),
+    onPressed: () {
+    // Show comment dialog
+    },
+    ),
+    IconButton(
+    icon: const Icon(Icons.share_outlined),
+    onPressed: () {
+    // Handle share
+    },
+    ),
     ],
     ),
     if (post.likes.isNotEmpty)

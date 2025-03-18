@@ -11,19 +11,25 @@ import 'package:flutter_chat_bubble/chat_bubble.dart';
 import 'package:flutter_chat_bubble/bubble_type.dart';
 import 'package:animate_do/animate_do.dart';
 import '../models/user_model.dart';
+import '../models/message_model.dart';
 import '../services/auth_service.dart';
+import '../services/chat_service.dart';
 import '../services/cloudinary_services.dart';
 import '../services/notification_service.dart';
 import '../services/user_service.dart';
 
 class ChatScreen extends StatefulWidget {
-  final UserModel otherUser;
+  final UserModel? otherUser;
   final String chatId;
+  final String otherUserName;
+  final bool isGroupChat;
 
   const ChatScreen({
     super.key,
-    required this.otherUser,
+    this.otherUser,
     required this.chatId,
+    required this.otherUserName,
+    this.isGroupChat = false,
   });
 
   @override
@@ -35,13 +41,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final _scrollController = ScrollController();
   final _authService = AuthService();
   final _userService = UserService();
+  final _chatService = ChatService();
   bool _isCheckingFriendship = true;
   bool _isSendingMessage = false;
   bool _isTyping = false;
   bool _showEmoji = false;
   Timer? _typingTimer;
   bool _isFriend = false;
-  List<QueryDocumentSnapshot<Map<String, dynamic>>> _messages = [];
+  List<Message> _messages = [];
   bool _isLoading = true;
   StreamSubscription? _messagesSubscription;
 
@@ -58,16 +65,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
 
-    _messagesSubscription = FirebaseFirestore.instance
-        .collection('chats')
-        .doc(widget.chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .listen((snapshot) {
+    _messagesSubscription = _chatService.getChatMessages(widget.chatId)
+        .listen((messages) {
       if (mounted) {
         setState(() {
-          _messages = snapshot.docs;
+          _messages = messages;
           _isLoading = false;
         });
 
@@ -151,9 +153,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
 
+    // For group chats, we don't need to check friendship
+    if (widget.isGroupChat || widget.otherUser == null) {
+      setState(() {
+        _isFriend = true;
+        _isCheckingFriendship = false;
+      });
+      return;
+    }
+
     final isFriend = await _userService.areFriends(
       currentUser.uid,
-      widget.otherUser.uid,
+      widget.otherUser!.uid,
     );
 
     if (mounted) {
@@ -238,59 +249,29 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     setState(() => _isSendingMessage = true);
 
     try {
-      final chatDoc = await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .get();
-
-      final batch = FirebaseFirestore.instance.batch();
-      final messageRef = FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .collection('messages')
-          .doc();
-
-      final messageData = {
-        'text': text,
-        'fileUrl': fileUrl,
-        'fileType': fileType,
-        'senderId': currentUser.uid,
-        'timestamp': FieldValue.serverTimestamp(),
-        'reactions': {},
-      };
-
-      batch.set(messageRef, messageData);
-
-      final displayText = text ?? (fileType == 'image' ? '📷 Photo' : '📎 File');
-      final chatData = {
-        'lastMessage': displayText,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': currentUser.uid,
-        'participants': [currentUser.uid, widget.otherUser.uid],
-        'unreadCount${widget.otherUser.uid}':
-        ((chatDoc.data()?['unreadCount${widget.otherUser.uid}'] ?? 0) as int) + 1,
-      };
-
-      batch.set(
-        FirebaseFirestore.instance.collection('chats').doc(widget.chatId),
-        chatData,
-        SetOptions(merge: true),
+      await _chatService.sendMessage(
+        chatId: widget.chatId,
+        content: text ?? '',
+        imageUrl: fileUrl,
+        type: fileType ?? 'text',
       );
 
-      await batch.commit();
       _messageController.clear();
       _scrollToBottom();
 
-      // Send push notification
-      await NotificationService.sendNotification(
-        userId: widget.otherUser.uid,
-        title: 'New message from ${currentUser.displayName}',
-        body: displayText,
-        data: {
-          'chatId': widget.chatId,
-          'senderId': currentUser.uid,
-        },
-      );
+      // Send push notification - only for direct messages
+      if (!widget.isGroupChat && widget.otherUser != null) {
+        await NotificationService.sendNotification(
+          userId: widget.otherUser!.uid,
+          title: 'New message from ${currentUser.displayName}',
+          body: text ?? (fileType == 'image' ? '📷 Photo' : '📎 File'),
+          data: {
+            'type': 'chat_message',
+            'chatId': widget.chatId,
+            'senderId': currentUser.uid,
+          },
+        );
+      }
     } catch (e) {
       _showErrorSnackbar('Error sending message: $e');
     } finally {
@@ -326,7 +307,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           .collection('users')
           .doc(currentUser.uid)
           .update({
-        'blockedUsers': FieldValue.arrayUnion([widget.otherUser.uid]),
+        'blockedUsers': FieldValue.arrayUnion([widget.otherUser!.uid]),
       });
 
       if (mounted) {
@@ -377,7 +358,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     if (reason != null) {
       try {
         await FirebaseFirestore.instance.collection('reports').add({
-          'reportedUser': widget.otherUser.uid,
+          'reportedUser': widget.otherUser!.uid,
           'reportedBy': _authService.currentUser?.uid,
           'reason': reason,
           'timestamp': FieldValue.serverTimestamp(),
@@ -672,7 +653,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Conversation'),
-          content: Text('Are you sure you want to delete your entire chat with ${widget.otherUser.name}? This cannot be undone.'),
+          content: Text('Are you sure you want to delete your entire chat with ${widget.otherUserName}? This cannot be undone.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -886,8 +867,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       child: GestureDetector(
         onLongPress: () => _showMessageOptions(
-            messageId,
-            isCurrentUser,
+          messageId,
+          isCurrentUser,
         ),
         child: Padding(
           padding: bubbleMargin,
@@ -904,15 +885,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   child: CircleAvatar(
                     radius: 12,
                     backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    backgroundImage: widget.otherUser.photoUrl != null &&
-                        widget.otherUser.photoUrl!.isNotEmpty
-                        ? CachedNetworkImageProvider(widget.otherUser.photoUrl!)
+                    backgroundImage: widget.otherUser!.photoUrl != null &&
+                        widget.otherUser!.photoUrl!.isNotEmpty
+                        ? CachedNetworkImageProvider(widget.otherUser!.photoUrl!)
                     as ImageProvider
                         : null,
-                    child: widget.otherUser.photoUrl == null ||
-                        widget.otherUser.photoUrl!.isEmpty
+                    child: widget.otherUser!.photoUrl == null ||
+                        widget.otherUser!.photoUrl!.isEmpty
                         ? Text(
-                      widget.otherUser.name[0].toUpperCase(),
+                      widget.otherUserName[0].toUpperCase(),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -990,161 +971,161 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
 
     return Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.white,
-          leadingWidth: 30,
-          leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.black87,
-            ),
-            onPressed: () => Navigator.pop(context),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        leadingWidth: 30,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.black87,
           ),
-          title: Row(
-            children: [
-              Hero(
-                tag: 'chat-${widget.otherUser.uid}',
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  backgroundImage: widget.otherUser.photoUrl != null &&
-                      widget.otherUser.photoUrl!.isNotEmpty
-                      ? CachedNetworkImageProvider(widget.otherUser.photoUrl!)
-                  as ImageProvider
-                      : null,
-                  child: widget.otherUser.photoUrl == null ||
-                      widget.otherUser.photoUrl!.isEmpty
-                      ? Text(
-                    widget.otherUser.name[0].toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            Hero(
+              tag: 'chat-${widget.otherUser!.uid}',
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                backgroundImage: widget.otherUser!.photoUrl != null &&
+                    widget.otherUser!.photoUrl!.isNotEmpty
+                    ? CachedNetworkImageProvider(widget.otherUser!.photoUrl!)
+                as ImageProvider
+                    : null,
+                child: widget.otherUser!.photoUrl == null ||
+                    widget.otherUser!.photoUrl!.isEmpty
+                    ? Text(
+                  widget.otherUserName[0].toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                )
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  // TODO: Navigate to user profile
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.otherUserName,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
-                  )
-                      : null,
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('chats')
+                          .doc(widget.chatId)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+
+                        final data = snapshot.data?.data() as Map<String, dynamic>?;
+                        final isTyping =
+                            data?['${widget.otherUser!.uid}_typing'] as bool? ?? false;
+
+                        return Text(
+                          isTyping ? 'typing...' : widget.otherUser!.profession,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isTyping ? Theme.of(context).primaryColor : Colors.grey,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // TODO: Navigate to user profile
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.otherUser.name,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('chats')
-                            .doc(widget.chatId)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) return const SizedBox.shrink();
-
-                          final data = snapshot.data?.data() as Map<String, dynamic>?;
-                          final isTyping =
-                              data?['${widget.otherUser.uid}_typing'] as bool? ?? false;
-
-                          return Text(
-                            isTyping ? 'typing...' : widget.otherUser.profession,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isTyping ? Theme.of(context).primaryColor : Colors.grey,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.videocam, color: Colors.black87),
+            onPressed: () {
+              // TODO: Implement video call
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.call, color: Colors.black87),
+            onPressed: () {
+              // TODO: Implement voice call
+            },
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              color: Colors.black87,
+            ),
+            onSelected: (value) {
+              switch (value) {
+                case 'block':
+                  _blockUser();
+                  break;
+                case 'report':
+                  _reportUser();
+                  break;
+                case 'search':
+                // TODO: Implement search in conversation
+                  break;
+                case 'mute':
+                // TODO: Implement notifications muting
+                  break;
+                case 'wallpaper':
+                // TODO: Implement chat wallpaper change
+                  break;
+                case 'delete_chat':
+                  _deleteEntireChat();
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'search',
+                child: Text('Search'),
+              ),
+              const PopupMenuItem(
+                value: 'mute',
+                child: Text('Mute notifications'),
+              ),
+              const PopupMenuItem(
+                value: 'wallpaper',
+                child: Text('Chat wallpaper'),
+              ),
+              const PopupMenuItem(
+                value: 'block',
+                child: Text('Block User'),
+              ),
+              const PopupMenuItem(
+                value: 'report',
+                child: Text('Report User'),
+              ),
+              const PopupMenuItem(
+                value: 'delete_chat',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete Chat', style: TextStyle(color: Colors.red)),
+                  ],
                 ),
               ),
             ],
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.videocam, color: Colors.black87),
-              onPressed: () {
-                // TODO: Implement video call
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.call, color: Colors.black87),
-              onPressed: () {
-                // TODO: Implement voice call
-              },
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(
-                Icons.more_vert,
-                color: Colors.black87,
-              ),
-              onSelected: (value) {
-                switch (value) {
-                  case 'block':
-                    _blockUser();
-                    break;
-                  case 'report':
-                    _reportUser();
-                    break;
-                  case 'search':
-                  // TODO: Implement search in conversation
-                    break;
-                  case 'mute':
-                  // TODO: Implement notifications muting
-                    break;
-                  case 'wallpaper':
-                  // TODO: Implement chat wallpaper change
-                    break;
-                  case 'delete_chat':
-                    _deleteEntireChat();
-                    break;
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'search',
-                  child: Text('Search'),
-                ),
-                const PopupMenuItem(
-                  value: 'mute',
-                  child: Text('Mute notifications'),
-                ),
-                const PopupMenuItem(
-                  value: 'wallpaper',
-                  child: Text('Chat wallpaper'),
-                ),
-                const PopupMenuItem(
-                  value: 'block',
-                  child: Text('Block User'),
-                ),
-                const PopupMenuItem(
-                  value: 'report',
-                  child: Text('Report User'),
-                ),
-                const PopupMenuItem(
-                  value: 'delete_chat',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_forever, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete Chat', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            )
-          ],
-        ),
+          )
+        ],
+      ),
       body: Container(
         child: _isCheckingFriendship
             ? const Center(child: CircularProgressIndicator())
@@ -1204,7 +1185,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Start the conversation with ${widget.otherUser.name}!',
+                      'Start the conversation with ${widget.otherUserName}!',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[500],
@@ -1219,7 +1200,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 padding: const EdgeInsets.all(16),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
-                  final message = _messages[index].data();
+                  final message = _messages[index].data;
                   final messageId = _messages[index].id;
                   final isCurrentUser = message['senderId'] == currentUser.uid;
                   final timestamp = message['timestamp'] != null
@@ -1231,12 +1212,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   bool isLastInGroup = true;
 
                   if (index > 0) {
-                    final prevMessage = _messages[index - 1].data();
+                    final prevMessage = _messages[index - 1].data;
                     isFirstInGroup = prevMessage['senderId'] != message['senderId'];
                   }
 
                   if (index < _messages.length - 1) {
-                    final nextMessage = _messages[index + 1].data();
+                    final nextMessage = _messages[index + 1].data;
                     isLastInGroup = nextMessage['senderId'] != message['senderId'];
                   }
 
