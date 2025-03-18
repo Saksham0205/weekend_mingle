@@ -61,6 +61,7 @@ class _FriendsTabState extends State<FriendsTab> with SingleTickerProviderStateM
           builder: (context) => ChatScreen(
             otherUser: otherUser,
             chatId: chatDocRef.id,
+            otherUserName: otherUser.name,
           ),
         ),
       );
