@@ -2061,22 +2061,21 @@ class _HomeScreenState extends State<HomeScreen> {
     Row(
     mainAxisAlignment: MainAxisAlignment.spaceAround,
     children: [
-    IconButton(
-    icon: Icon(
-    post.likes.contains(currentUser?.uid)
-    ? Icons.favorite
-        : Icons.favorite_border,
-    color: post.likes.contains(currentUser?.uid)
-    ? Colors.red
-        : null,
-    onPressed: () {
-    if (currentUser != null) {
-    Provider.of<feed.FeedProvider>(context, listen: false)
-        .likePost(post.id, currentUser.uid);
-    }
-    },
-    ),
-    IconButton(
+      IconButton(
+        icon: Icon(
+          post.likes.contains(currentUser?.uid)
+              ? Icons.favorite
+              : Icons.favorite_border,
+        ),
+        color: post.likes.contains(currentUser?.uid) ? Colors.red : null, // Move color here
+        onPressed: () {
+          if (currentUser != null) {
+            Provider.of<feed.FeedProvider>(context, listen: false)
+                .likePost(post.id, currentUser.uid);
+          }
+        },
+      ),
+      IconButton(
     icon: const Icon(Icons.comment_outlined),
     onPressed: () {
     // Show comment dialog
