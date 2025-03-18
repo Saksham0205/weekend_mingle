@@ -475,7 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       final doc = usersToShow[index];
                       try {
-                        final user = userFromDoc(doc);
+                        final user = UserModel.fromDocumentSnapshot(doc);
                         return _buildUserConnectionCard(user);
                       } catch (e) {
                         print('Error parsing user data at index $index: $e');
@@ -512,65 +512,65 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
           const SizedBox(height: 16),
-          CircleAvatar(
-            radius: 45,
-            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-            backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
-                ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                : null,
-            child: user.photoUrl == null || user.photoUrl!.isEmpty
-                ? Text(
-              user.name[0].toUpperCase(),
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-              ),
-            )
-                : null,
+      CircleAvatar(
+        radius: 45,
+        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+        backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+            ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
+            : null,
+        child: user.photoUrl == null || user.photoUrl!.isEmpty
+            ? Text(
+          user.name[0].toUpperCase(),
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).primaryColor,
           ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              user.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+        )
+            : null,
+      ),
+      const SizedBox(height: 12),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Text(
+          user.name,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              '${user.profession ?? 'Professional'} | ${user.company ?? 'Weekend Mingler'}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Text(
+          '${user.profession ?? 'Professional'} | ${user.company ?? 'Weekend Mingler'}',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => _sendFriendRequest(context, currentUser.uid, user),
-            icon: const Icon(Icons.person_add, size: 16),
-            label: const Text('Connect'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              textStyle: const TextStyle(fontSize: 14),
-            ),
-          ),
-          const SizedBox(height: 12),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      const SizedBox(height: 16),
+      ElevatedButton.icon(
+        onPressed: () => _sendFriendRequest(context, currentUser.uid, user),
+        icon: const Icon(Icons.person_add, size: 16),
+        label: const Text('Connect'),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          textStyle: const TextStyle(fontSize: 14),
+        ),
+      ),SizedBox(height: 12),
+
         ],
       ),
     );
@@ -1028,7 +1028,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemBuilder: (context, index) {
                   final doc = onlineUsers[index];
                   try {
-                    final user = userFromDoc(doc);
+                    final user = UserModel.fromDocumentSnapshot(doc);
                     return _buildActiveUserItem(user);
                   } catch (e) {
                     print('Error parsing online user: $e');
@@ -2461,7 +2461,7 @@ class MessagesTab extends StatelessWidget {
                       return const SizedBox.shrink();
                     }
 
-                    final otherUser = userFromDoc(userSnapshot.data!);
+                    final otherUser = UserModel.fromDocumentSnapshot(userSnapshot.data!);
                     final lastMessage = chat['lastMessage'] as String?;
                     final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
                     final unreadCount =
@@ -2612,7 +2612,7 @@ class ProfileTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final userData = userFromDoc(snapshot.data!);
+        final userData = UserModel.fromDocumentSnapshot(snapshot.data!);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -2730,7 +2730,7 @@ UserModel userFromDoc(dynamic doc) {
     final data = doc.data() as Map<String, dynamic>;
     return UserModel.fromMap(data, doc.id);
   } else if (doc is DocumentSnapshot) {
-    return UserModel.fromFirestore(doc);
+    return UserModel.fromDocumentSnapshot(doc);
   } else {
     throw Exception('Unsupported document type');
   }

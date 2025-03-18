@@ -20,7 +20,7 @@ class StoryService {
         .doc(userId)
         .snapshots()
         .asyncMap((userDoc) async {
-      final userData = UserModel.fromFirestore(userDoc);
+      final userData = UserModel.fromDocumentSnapshot(userDoc);
       final friendIds = userData.friends;
 
       if (friendIds.isEmpty) {
@@ -66,7 +66,7 @@ class StoryService {
 
     // Get user data
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = UserModel.fromFirestore(userDoc);
+    final userData = UserModel.fromDocumentSnapshot(userDoc);
 
     // Upload media to Cloudinary if provided
     String? mediaUrl;
@@ -141,7 +141,7 @@ class StoryService {
         .doc(userId)
         .snapshots()
         .asyncMap((userDoc) async {
-      final userData = UserModel.fromFirestore(userDoc);
+      final userData = UserModel.fromDocumentSnapshot(userDoc);
       final friendIds = userData.friends;
 
       if (friendIds.isEmpty) {

@@ -99,7 +99,7 @@ class FriendService {
         .where('friends', arrayContains: userId)
         .snapshots()
         .map((snapshot) => snapshot.docs
-        .map((doc) => UserModel.fromFirestore(doc))
+        .map((doc) => UserModel.fromDocumentSnapshot(doc))
         .toList());
   }
 
@@ -118,7 +118,7 @@ class FriendService {
     final user = await _firestore.collection('users').doc(userId1).get();
     if (!user.exists) return false;
 
-    final userData = UserModel.fromFirestore(user);
+    final userData = UserModel.fromDocumentSnapshot(user);
     return userData.friends.contains(userId2);
   }
 

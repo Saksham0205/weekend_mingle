@@ -103,8 +103,8 @@ class UserModel {
     );
   }
 
-  // Overload for non-generic DocumentSnapshot
-  factory UserModel.fromFirestore(DocumentSnapshot snapshot) {
+  // Renamed from fromFirestore to fromDocumentSnapshot for non-generic DocumentSnapshot
+  factory UserModel.fromDocumentSnapshot(DocumentSnapshot snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
     return UserModel(
       uid: snapshot.id,

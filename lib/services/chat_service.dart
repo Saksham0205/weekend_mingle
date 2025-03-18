@@ -46,7 +46,7 @@ class ChatService {
 
     // Get user data
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = UserModel.fromFirestore(userDoc);
+    final userData = UserModel.fromDocumentSnapshot(userDoc);
 
     // Create message
     final messageRef = _firestore
@@ -122,10 +122,10 @@ class ChatService {
 
     // No existing chat, create a new one
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final currentUser = UserModel.fromFirestore(userDoc);
+    final currentUser = UserModel.fromDocumentSnapshot(userDoc);
 
     final otherUserDoc = await _firestore.collection('users').doc(otherUserId).get();
-    final otherUser = UserModel.fromFirestore(otherUserDoc);
+    final otherUser = UserModel.fromDocumentSnapshot(otherUserDoc);
 
     final chatRef = _firestore.collection('chats').doc();
     final chat = Chat(
@@ -175,7 +175,7 @@ class ChatService {
 
     for (final memberId in memberIds) {
       final memberDoc = await _firestore.collection('users').doc(memberId).get();
-      final memberData = UserModel.fromFirestore(memberDoc);
+      final memberData = UserModel.fromDocumentSnapshot(memberDoc);
 
       participantNames[memberId] = memberData.name;
       participantPhotos[memberId] = memberData.photoUrl;
@@ -256,7 +256,7 @@ class ChatService {
         participants.add(memberId);
 
         final memberDoc = await _firestore.collection('users').doc(memberId).get();
-        final memberData = UserModel.fromFirestore(memberDoc);
+        final memberData = UserModel.fromDocumentSnapshot(memberDoc);
 
         participantNames[memberId] = memberData.name;
         participantPhotos[memberId] = memberData.photoUrl;
