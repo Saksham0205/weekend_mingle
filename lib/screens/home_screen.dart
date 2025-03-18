@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:weekend_mingle/screens/chat_screen.dart';
 import '../models/user_model.dart';
+import '../models/weekend_activity_model.dart';
 import '../services/auth_service.dart';
 import '../services/friend_service.dart';
 import '../services/location_service.dart';
@@ -12,12 +13,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'edit_profile_screen.dart';
 import 'explore_tab.dart';
 import 'friends_tab.dart';
-import '../providers/feed_provider.dart';
-import '../providers/notification_provider.dart';
+import '../providers/feed_provider.dart' as feed;
+import '../providers/notification_provider.dart' as app_notifications;
 import 'notifications_screen.dart';
 import 'groups_events_screen.dart';
 import 'chats_tab.dart' as ChatsTab;
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:intl/intl.dart';
+import 'package:badges/badges.dart' as badges;
+import '../models/post_model.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -75,9 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (userProvider.user?.uid != null) {
       // Use addPostFrameCallback to ensure this happens after the build is complete
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Provider.of<FeedProvider>(context, listen: false)
+        Provider.of<feed.FeedProvider>(context, listen: false)
             .initializeFeed(userProvider.user!.uid);
-        Provider.of<NotificationProvider>(context, listen: false)
+        Provider.of<app_notifications.NotificationProvider>(context, listen: false)
             .initializeNotifications(userProvider.user!.uid);
       });
     }
@@ -85,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   PreferredSizeWidget _buildTopNavigationBar() {
     final userProvider = Provider.of<UserProvider>(context);
-    final notificationProvider = Provider.of<NotificationProvider>(context);
+    final notificationProvider = Provider.of<app_notifications.NotificationProvider>(context);
     final user = userProvider.user;
 
     return AppBar(
@@ -98,70 +102,79 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() => _currentIndex = 4); // Switch to profile tab
             },
             child: CircleAvatar(
-              radius: 20,
-              backgroundImage: user?.photoUrl != null
-                  ? CachedNetworkImageProvider(user!.photoUrl!)
+              radius: 18,
+              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+              backgroundImage: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+                  ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
                   : null,
-              child: user?.photoUrl == null ? const Icon(Icons.person) : null,
+              child: user?.photoUrl == null || user!.photoUrl!.isEmpty
+                  ? Text(
+                user!.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              )
+                  : null,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Container(
-              height: 40,
+              height: 36,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(20),
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(18),
               ),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search professionals, groups, events...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintText: 'Search people, plans, or groups...',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.grey[500],
+                    size: 18,
+                  ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
                 ),
+                onSubmitted: (query) {
+                  // TODO: Implement search functionality
+                },
+                style: const TextStyle(fontSize: 14),
               ),
             ),
           ),
-          const SizedBox(width: 12),
           IconButton(
-            icon: Stack(
-              children: [
-                const Icon(Icons.notifications_outlined),
-                if (notificationProvider.unreadCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 12,
-                        minHeight: 12,
-                      ),
-                      child: Text(
-                        notificationProvider.unreadCount.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
+            icon: badges.Badge(
+              showBadge: notificationProvider.unreadCount > 0,
+              badgeContent: Text(
+                notificationProvider.unreadCount.toString(),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white,
+                ),
+              ),
+              child: const Icon(Icons.notifications_outlined),
             ),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsScreen(),
-                ),
-              );
+              setState(() {
+                _showNotifications = !_showNotifications;
+              });
+              if (_showNotifications) {
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                if (userProvider.user?.uid != null) {
+                  notificationProvider.markAllAsRead(userProvider.user!.uid);
+                }
+              }
             },
           ),
         ],
@@ -170,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMainFeed() {
-    return Consumer<FeedProvider>(
+    return Consumer<feed.FeedProvider>(
       builder: (context, feedProvider, child) {
         if (feedProvider.isLoading) {
           return const Center(child: CircularProgressIndicator());
@@ -204,10 +217,32 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: ListView(
             children: [
-              _buildUsersSection(),
-              _buildWeekendPlansSection(),
-
-              ...feedProvider.posts.map((post) => _buildPostCard(post)).toList(),
+              _buildStoriesSection(),
+              _buildRecommendedPeopleSection(),
+              _buildTrendingWeekendPlansSection(),
+              _buildExploreEventsSection(),
+              _buildActiveUsersSection(),
+              ...feedProvider.posts.map((feedPost) => _buildPostCard(
+                  Post(
+                    id: feedPost.id,
+                    userId: feedPost.userId,
+                    userName: feedPost.userName,
+                    userPhotoUrl: feedPost.userPhotoUrl,
+                    content: feedPost.content,
+                    imageUrl: feedPost.imageUrl,
+                    timestamp: feedPost.timestamp,
+                    likes: feedPost.likes,
+                    comments: feedPost.comments.map((comment) =>
+                        Comment(
+                          userId: comment.userId,
+                          userName: comment.userName,
+                          userPhotoUrl: comment.userPhotoUrl,
+                          content: comment.content,
+                          timestamp: comment.timestamp,
+                        )
+                    ).toList(),
+                  )
+              )).toList(),
             ],
           ),
         );
@@ -215,572 +250,933 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildUsersSection() {
+  // 1. Stories & Quick Updates Section
+  Widget _buildStoriesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Stories & Updates',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline),
+                onPressed: () {
+                  // TODO: Implement add story functionality
+                },
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 110,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            children: [
+              // Your Story (Add Story Button)
+              _buildAddStoryButton(),
+
+              // Example Weekend Mood Stories
+              _buildWeekendMoodStory('Party', Icons.local_fire_department, Colors.red),
+              _buildWeekendMoodStory('Chill', Icons.coffee, Colors.brown),
+              _buildWeekendMoodStory('Gaming', Icons.sports_esports, Colors.purple),
+              _buildWeekendMoodStory('Outdoor', Icons.landscape, Colors.green),
+
+              // Fetch actual stories from Firebase here
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddStoryButton() {
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = userProvider.user;
+    if (user == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[200],
+                  image: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                      ? DecorationImage(
+                    image: CachedNetworkImageProvider(user.photoUrl!),
+                    fit: BoxFit.cover,
+                  )
+                      : null,
+                ),
+                child: user.photoUrl == null || user.photoUrl!.isEmpty
+                    ? Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Colors.grey[400],
+                )
+                    : null,
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.add,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your Story',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeekendMoodStory(String title, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withOpacity(0.7),
+                  color,
+                ],
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 2. Recommended People to Connect Section
+  Widget _buildRecommendedPeopleSection() {
     final currentUser = Provider.of<UserProvider>(context).user;
     if (currentUser == null) {
-      print('Current user is null');
       return const SizedBox.shrink();
     }
 
-    print('Current user ID: ${currentUser.uid}');
-
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
-          .where(FieldPath.documentId, isNotEqualTo: currentUser.uid)
+          .doc(currentUser.uid)
           .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          print('Error fetching users: ${snapshot.error}');
+      builder: (context, userSnapshot) {
+        if (!userSnapshot.hasData) {
           return const SizedBox.shrink();
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
+        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+        final sentRequests = List<String>.from(userData['sentFriendRequests'] ?? []);
+        final friends = List<String>.from(userData['friends'] ?? []);
+        final pendingRequests = List<String>.from(userData['pendingFriendRequests'] ?? []);
 
-        return StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUser.uid)
-              .snapshots(),
-          builder: (context, currentUserSnapshot) {
-            if (!currentUserSnapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final currentUserData = currentUserSnapshot.data!.data() as Map<String, dynamic>;
-            final sentRequests = List<String>.from(currentUserData['sentFriendRequests'] ?? []);
-            final friends = List<String>.from(currentUserData['friends'] ?? []);
-            final pendingRequests = List<String>.from(currentUserData['pendingFriendRequests'] ?? []);
-
-            final users = snapshot.data?.docs
-                .map((doc) {
-              try {
-                // Skip users who are already friends or have pending requests
-                if (sentRequests.contains(doc.id) ||
-                    friends.contains(doc.id) ||
-                    pendingRequests.contains(doc.id)) {
-                  return null;
-                }
-                return UserModel.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>, null);
-              } catch (e) {
-                print('Error parsing user data for document ${doc.id}: $e');
-                return null;
-              }
-            })
-                .where((user) => user != null)
-                .toList() ??
-                [];
-
-            if (users.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 48,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No new connections available',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Check back later for more people to connect with',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return Container(
-              margin: const EdgeInsets.only(top: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'People to Connect',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() => _currentIndex = 3); // Switch to explore tab
-                          },
-                          child: const Text('See All'),
-                        ),
-                      ],
+                  const Text(
+                    'People to Connect',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(
-                    height: 180,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: users.length,
-                      itemBuilder: (context, index) => _buildUserCard(users[index]!),
-                    ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _currentIndex = 1); // Switch to connections tab
+                    },
+                    child: const Text('See All'),
                   ),
                 ],
               ),
-            );
-          },
+            ),
+            SizedBox(
+              height: 250,
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .where(FieldPath.documentId, isNotEqualTo: currentUser.uid)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(
+                      child: Text('Something went wrong'),
+                    );
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final allUsers = snapshot.data!.docs;
+                  final usersToShow = allUsers.where((doc) {
+                    final userId = doc.id;
+                    // Filter out friends, pending requests and sent requests
+                    return !friends.contains(userId) &&
+                        !sentRequests.contains(userId) &&
+                        !pendingRequests.contains(userId);
+                  }).toList();
+
+                  if (usersToShow.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No new connections available',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    itemCount: usersToShow.length,
+                    itemBuilder: (context, index) {
+                      final doc = usersToShow[index];
+                      try {
+                        final userData = doc.data() as Map<String, dynamic>;
+                        final user = UserModel.fromFirestore(
+                            doc as DocumentSnapshot<Map<String, dynamic>>,
+                            null
+                        );
+
+                        return _buildUserConnectionCard(user);
+                      } catch (e) {
+                        print('Error parsing user data at index $index: $e');
+                        return const SizedBox.shrink();
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildUserCard(UserModel user) {
+  Widget _buildUserConnectionCard(UserModel user) {
+    final currentUser = Provider.of<UserProvider>(context).user;
+    if (currentUser == null) return const SizedBox.shrink();
+
     return Container(
-      width: 160,
+      width: 180,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: InkWell(
-          onTap: () => _showUserBottomSheet(user),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 16),
+          CircleAvatar(
+            radius: 45,
+            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+            backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
+                : null,
+            child: user.photoUrl == null || user.photoUrl!.isEmpty
+                ? Text(
+              user.name[0].toUpperCase(),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            )
+                : null,
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              user.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '${user.profession ?? 'Professional'} | ${user.company ?? 'Weekend Mingler'}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _sendFriendRequest(context, currentUser.uid, user),
+            icon: const Icon(Icons.person_add, size: 16),
+            label: const Text('Connect'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              textStyle: const TextStyle(fontSize: 14),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // 3. Featured & Trending Weekend Plans Section
+  Widget _buildTrendingWeekendPlansSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Trending Weekend Plans',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GroupsEventsScreen(),
+                    ),
+                  );
+                },
+                child: const Text('See All'),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 280,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('weekend_activities')
+                .orderBy('currentAttendees', descending: true)
+                .limit(10)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final activities = snapshot.data?.docs ?? [];
+
+              if (activities.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_busy,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No weekend plans yet',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _showCreateWeekendPlanDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create Plan'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                itemCount: activities.length,
+                itemBuilder: (context, index) {
+                  final doc = activities[index];
+                  try {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final activity = WeekendActivity.fromMap(data, doc.id);
+                    return _buildWeekendPlanCard(activity);
+                  } catch (e) {
+                    print('Error parsing weekend activity: $e');
+                    return const SizedBox.shrink();
+                  }
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeekendPlanCard(WeekendActivity activity) {
+    final dateFormat = DateFormat('EEEE, MMM d');
+    final timeFormat = DateFormat('h:mm a');
+
+    return Container(
+      width: 250,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Event Image or Placeholder
+          Container(
+            height: 120,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              image: activity.imageUrl != null
+                  ? DecorationImage(
+                image: CachedNetworkImageProvider(activity.imageUrl!),
+                fit: BoxFit.cover,
+              )
+                  : null,
+              gradient: activity.imageUrl == null
+                  ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Theme.of(context).primaryColor.withOpacity(0.05),
-                  Colors.white,
+                  Theme.of(context).primaryColor.withOpacity(0.7),
+                  Theme.of(context).primaryColor,
                 ],
-              ),
+              )
+                  : null,
             ),
+            child: activity.imageUrl == null
+                ? Center(
+              child: Icon(
+                _getEventTypeIcon(activity.eventType),
+                color: Colors.white,
+                size: 40,
+              ),
+            )
+                : null,
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 35,
-                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty && Uri.tryParse(user.photoUrl!)?.hasAbsolutePath == true
-                      ? CachedNetworkImageProvider(user.photoUrl!)
-                      : null,
-                  child: (user.photoUrl == null || user.photoUrl!.isEmpty || Uri.tryParse(user.photoUrl!)?.hasAbsolutePath != true)
-                      ? Text(
-                    user.name[0].toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  )
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    children: [
-                      Text(
-                        user.name,
-                        style: const TextStyle(
-                          fontSize: 14,
+                // Event Name & Category
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        activity.eventType,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.profession,
+                    ),
+                    if (activity.isPaid)
+                      Container(
+                        margin: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Event Title
+                Text(
+                  activity.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Date & Time
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${dateFormat.format(activity.date)} • ${timeFormat.format(activity.startTime)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 4),
+
+                // Location
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        activity.location,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
                       ),
-                      if (user.company != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          user.company!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Attendees & Join Button
+                Row(
+                  children: [
+                    // Attendee avatars would go here
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${activity.currentAttendees}/${activity.capacity}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[800],
                         ),
-                      ],
-                    ],
-                  ),
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle join event
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
+                      child: const Text('Join'),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // 4. Explore Events & Groups Section
+  Widget _buildExploreEventsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Explore Categories',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() => _currentIndex = 3); // Switch to explore tab
+                },
+                child: const Text('More'),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              _buildCategoryCard('Professional', Icons.business, Colors.blue),
+              _buildCategoryCard('Social', Icons.people, Colors.orange),
+              _buildCategoryCard('Fitness', Icons.fitness_center, Colors.green),
+              _buildCategoryCard('Gaming', Icons.sports_esports, Colors.purple),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryCard(String title, IconData icon, Color color) {
+    return InkWell(
+      onTap: () {
+        // Navigate to category page
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: MediaQuery.of(context).size.width / 2 - 24,
+        height: 100,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.7),
+              color,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: Colors.white,
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildWeekendPlansSection() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('weekend_activities')
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const SizedBox.shrink();
-        }
+  // 5. Active Users Nearby Section
+  Widget _buildActiveUsersSection() {
+    final currentUser = Provider.of<UserProvider>(context).user;
+    if (currentUser == null) return const SizedBox.shrink();
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final activities = snapshot.data?.docs ?? [];
-
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Weekend Plans',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const GroupsEventsScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('See All'),
-                    ),
-                  ],
+              const Text(
+                'Active Users Nearby',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              if (activities.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 48,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No weekend plans yet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Create a new plan and connect with others!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            _showCreateWeekendPlanDialog();
-                          },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create Plan'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                SizedBox(
-                  height: 220,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    itemCount: activities.length,
-                    itemBuilder: (context, index) {
-                      final activity = activities[index].data() as Map<String, dynamic>;
-                      return Container(
-                        width: 280,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              // Show activity details
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(16),
-                                    ),
-                                    image: activity['imageUrl'] != null
-                                        ? DecorationImage(
-                                      image: CachedNetworkImageProvider(
-                                        activity['imageUrl'],
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
-                                        : null,
-                                    gradient: activity['imageUrl'] == null
-                                        ? LinearGradient(
-                                      colors: [
-                                        Theme.of(context).primaryColor,
-                                        Theme.of(context)
-                                            .primaryColor
-                                            .withOpacity(0.7),
-                                      ],
-                                    )
-                                        : null,
-                                  ),
-                                  child: activity['imageUrl'] == null
-                                      ? Center(
-                                    child: Icon(
-                                      Icons.event,
-                                      size: 48,
-                                      color: Colors.white.withOpacity(0.8),
-                                    ),
-                                  )
-                                      : null,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        activity['title'] ?? 'Weekend Activity',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        activity['description'] ?? '',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+              TextButton(
+                onPressed: () {
+                  setState(() => _currentIndex = 1); // Switch to connections tab
+                },
+                child: const Text('See All'),
+              ),
             ],
           ),
-        );
-      },
+        ),
+        SizedBox(
+          height: 100,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .where('isOnline', isEqualTo: true)
+                .where(FieldPath.documentId, isNotEqualTo: currentUser.uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Center(child: Text('Something went wrong'));
+              }
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final onlineUsers = snapshot.data?.docs ?? [];
+
+              if (onlineUsers.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No active users nearby',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: onlineUsers.length,
+                itemBuilder: (context, index) {
+                  final doc = onlineUsers[index];
+                  try {
+                    final user = UserModel.fromFirestore(
+                        doc as DocumentSnapshot<Map<String, dynamic>>,
+                        null
+                    );
+                    return _buildActiveUserItem(user);
+                  } catch (e) {
+                    print('Error parsing online user: $e');
+                    return const SizedBox.shrink();
+                  }
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-
-  Widget _buildPostCard(Post post) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final currentUser = userProvider.user;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: post.userPhotoUrl != null
-                  ? CachedNetworkImageProvider(post.userPhotoUrl!)
-                  : null,
-              child: post.userPhotoUrl == null ? const Icon(Icons.person) : null,
-            ),
-            title: Text(post.userName),
-            subtitle: Text(timeago.format(post.timestamp)),
-            trailing: PopupMenuButton(
-              itemBuilder: (context) => [
-                if (currentUser?.uid == post.userId)
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete'),
-                  ),
-                const PopupMenuItem(
-                  value: 'report',
-                  child: Text('Report'),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'delete') {
-                  Provider.of<FeedProvider>(context, listen: false)
-                      .deletePost(post.id);
-                }
-              },
-            ),
-          ),
-          if (post.imageUrl != null)
-            Image.network(
-              post.imageUrl!,
-              fit: BoxFit.cover,
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(post.content),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              IconButton(
-                icon: Icon(
-                  post.likes.contains(currentUser?.uid)
-                      ? Icons.favorite
-                      : Icons.favorite_border,
-                  color: post.likes.contains(currentUser?.uid)
-                      ? Colors.red
+  Widget _buildActiveUserItem(UserModel user) {
+    return GestureDetector(
+      onTap: () => _showUserBottomSheet(user),
+      child: Container(
+        margin: const EdgeInsets.only(right: 16),
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                      ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
+                      : null,
+                  child: user.photoUrl == null || user.photoUrl!.isEmpty
+                      ? Text(
+                    user.name[0].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  )
                       : null,
                 ),
-                onPressed: () {
-                  if (currentUser != null) {
-                    Provider.of<FeedProvider>(context, listen: false)
-                        .likePost(post.id, currentUser.uid);
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.comment_outlined),
-                onPressed: () {
-                  // Show comment dialog
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () {
-                  // Handle share
-                },
-              ),
-            ],
-          ),
-          if (post.likes.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                '${post.likes.length} ${post.likes.length == 1 ? 'like' : 'likes'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          if (post.comments.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Comments',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: post.comments.length > 2 ? 2 : post.comments.length,
-              itemBuilder: (context, index) {
-                final comment = post.comments[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: comment.userPhotoUrl != null
-                        ? CachedNetworkImageProvider(comment.userPhotoUrl!)
-                        : null,
-                    child: comment.userPhotoUrl == null
-                        ? const Icon(Icons.person)
-                        : null,
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 2,
+                      ),
+                    ),
                   ),
-                  title: Text(comment.userName),
-                  subtitle: Text(comment.content),
-                );
-              },
+                ),
+              ],
             ),
-            if (post.comments.length > 2)
-              TextButton(
-                onPressed: () {
-                  // Show all comments
-                },
-                child: Text('View all ${post.comments.length} comments'),
+            const SizedBox(height: 8),
+            Text(
+              user.name.split(' ')[0], // Just the first name
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
-        ],
+        ),
       ),
     );
+  }
+
+  IconData _getEventTypeIcon(String eventType) {
+    switch (eventType.toLowerCase()) {
+      case 'party':
+        return Icons.local_bar;
+      case 'dinner':
+        return Icons.restaurant;
+      case 'movie':
+        return Icons.movie;
+      case 'concert':
+        return Icons.music_note;
+      case 'sports':
+        return Icons.sports_basketball;
+      case 'hiking':
+        return Icons.terrain;
+      case 'gaming':
+        return Icons.sports_esports;
+      case 'networking':
+        return Icons.business;
+      default:
+        return Icons.event;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildTopNavigationBar(),
-      body: _currentIndex == 0 ? _buildMainFeed() : _getScreen(),
+      body: Stack(
+        children: [
+          _currentIndex == 0 ? _buildMainFeed() : _getScreen(),
+          if (_showNotifications) _buildNotificationsOverlay(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -1395,9 +1791,338 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildNotificationsOverlay() {
+    final notificationProvider = Provider.of<app_notifications.NotificationProvider>(context);
+    final notifications = notificationProvider.notifications;
+
+    return Positioned(
+      top: 0,
+      right: 0,
+      width: MediaQuery.of(context).size.width * 0.85,
+      child: GestureDetector(
+        onTap: () {}, // Prevent clicks from passing through
+        child: Card(
+          margin: const EdgeInsets.only(top: 8, right: 8),
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.6,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Notifications',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          setState(() {
+                            _showNotifications = false;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Notification List
+                Expanded(
+                  child: notifications.isEmpty
+                      ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_off_outlined,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No notifications yet',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                      : ListView.builder(
+                    itemCount: notifications.length,
+                    itemBuilder: (context, index) {
+                      final notification = notifications[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: null, // We don't have sender photo in our model
+                          child: const Icon(Icons.person),
+                        ),
+                        title: Text(notification.title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(notification.message),
+                            const SizedBox(height: 4),
+                            Text(
+                              timeago.format(notification.timestamp),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: !notification.isRead
+                            ? Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                            : null,
+                        onTap: () {
+                          // Mark as read
+                          notificationProvider.markAsRead(notification.id);
+                          // Handle notification tap based on type
+                          _handleNotificationTap(notification);
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const Divider(height: 1),
+                // Footer
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TextButton(
+                    child: const Text('See All Notifications'),
+                    onPressed: () {
+                      setState(() {
+                        _showNotifications = false;
+                      });
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleNotificationTap(app_notifications.Notification notification) {
+    setState(() {
+      _showNotifications = false;
+    });
+
+    switch (notification.type) {
+      case 'friend_request':
+        setState(() => _currentIndex = 1); // Switch to connections tab
+        if (notification.relatedId != null) {
+          // If there's a related user ID, we could show their profile
+        }
+        break;
+      case 'message':
+        if (notification.relatedId != null) {
+          // For message notifications, relatedId is likely the chatId
+          final chatId = notification.relatedId!;
+          // Find the other user ID from the chat ID
+          List<String> userIds = chatId.split('_');
+          if (userIds.length == 2) {
+            final currentUser = Provider.of<UserProvider>(context, listen: false).user;
+            final otherUserId = userIds[0] == currentUser?.uid ? userIds[1] : userIds[0];
+
+            // Fetch user data
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(otherUserId)
+                .get()
+                .then((userDoc) {
+              if (userDoc.exists && context.mounted) {
+                final userData = userDoc.data()!;
+                final otherUser = UserModel.fromMap(userData, otherUserId);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatScreen(
+                      otherUser: otherUser,
+                      chatId: chatId,
+                    ),
+                  ),
+                );
+              }
+            });
+          }
+        }
+        break;
+      case 'weekend_plan':
+      // Navigate to the specific weekend plan
+        if (notification.relatedId != null) {
+          final planId = notification.relatedId!;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const GroupsEventsScreen(),
+              // TODO: Navigate to specific plan with planId
+            ),
+          );
+        }
+        break;
+      default:
+      // Default action is to go to the notifications screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const NotificationsScreen(),
+          ),
+        );
+    }
+  }
+
+  Widget _buildPostCard(Post post) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final currentUser = userProvider.user;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+      ListTile(
+      leading: CircleAvatar(
+      backgroundImage: post.userPhotoUrl != null
+      ? CachedNetworkImageProvider(post.userPhotoUrl!)
+          : null,
+      child: post.userPhotoUrl == null ? const Icon(Icons.person) : null,
+    ),
+    title: Text(post.userName),
+    subtitle: Text(timeago.format(post.timestamp)),
+    trailing: PopupMenuButton(
+    itemBuilder: (context) => [
+    if (currentUser?.uid == post.userId)
+    const PopupMenuItem(
+    value: 'delete',
+    child: Text('Delete'),
+    ),
+    const PopupMenuItem(
+    value: 'report',
+    child: Text('Report'),
+    ),
+    ],
+    onSelected: (value) {
+    if (value == 'delete') {
+    Provider.of<feed.FeedProvider>(context, listen: false)
+        .deletePost(post.id);
+    }
+    },
+    ),
+    ),
+    if (post.imageUrl != null)
+    CachedNetworkImage(
+    imageUrl: post.imageUrl!,
+    fit: BoxFit.cover,
+    width: double.infinity,
+    placeholder: (context, url) => const Center(
+    child: CircularProgressIndicator(),
+    ),
+    errorWidget: (context, url, error) => const Icon(Icons.error),
+    ),
+    Padding(
+    padding: const EdgeInsets.all(16),
+    child: Text(post.content),
+    ),
+    Row(
+    mainAxisAlignment: MainAxisAlignment.spaceAround,
+    children: [
+      IconButton(
+        icon: Icon(
+          post.likes.contains(currentUser?.uid)
+              ? Icons.favorite
+              : Icons.favorite_border,
+        ),
+        color: post.likes.contains(currentUser?.uid) ? Colors.red : null,
+        onPressed: () {
+          if (currentUser != null) {
+            Provider.of<feed.FeedProvider>(context, listen: false)
+                .likePost(post.id, currentUser.uid);
+          }
+        },
+      ),
+    ],
+    ),
+    if (post.likes.isNotEmpty)
+    Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Text(
+    '${post.likes.length} ${post.likes.length == 1 ? 'like' : 'likes'}',
+    style: const TextStyle(fontWeight: FontWeight.bold),
+    ),
+    ),
+    if (post.comments.isNotEmpty) ...[
+    const Padding(
+    padding: EdgeInsets.symmetric(horizontal: 16),
+    child: Text(
+    'Comments',
+    style: TextStyle(fontWeight: FontWeight.bold),
+    ),
+    ),
+    ListView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: post.comments.length > 2 ? 2 : post.comments.length,
+    itemBuilder: (context, index) {
+    final comment = post.comments[index];
+    return ListTile(
+    leading: CircleAvatar(
+    backgroundImage: comment.userPhotoUrl != null
+    ? CachedNetworkImageProvider(comment.userPhotoUrl!)
+        : null,
+    child: comment.userPhotoUrl == null
+    ? const Icon(Icons.person)
+        : null,
+    ),
+    title: Text(comment.userName),
+    subtitle: Text(comment.content),
+    );
+    },
+    ),
+    if (post.comments.length > 2)
+    TextButton(
+    onPressed: () {
+    // Show all comments
+    },
+    child: Text('View all ${post.comments.length} comments'),
+    ),
+    ],
+    ],
+    ),
+    );
+  }
 }
-
-
 
 class AnimatedCard extends StatefulWidget {
   final UserModel user;
@@ -1698,9 +2423,8 @@ class MessagesTab extends StatelessWidget {
             final chats = snapshot.data!.docs.where((chat) {
               final participants = List<String>.from(chat.data()['participants'] ?? []);
               final otherUserId = participants.firstWhere(
-                    (id) => id != currentUser.uid,
-                orElse: () => '',
-              );
+                      (id) => id != currentUser.uid,
+                  orElse: () => '');
               // Only show chats with friends
               return friends.contains(otherUserId);
             }).toList();
@@ -1744,9 +2468,8 @@ class MessagesTab extends StatelessWidget {
                 final chat = chats[index].data();
                 final participants = List<String>.from(chat['participants'] ?? []);
                 final otherUserId = participants.firstWhere(
-                      (id) => id != currentUser.uid,
-                  orElse: () => '',
-                );
+                        (id) => id != currentUser.uid,
+                    orElse: () => '');
 
                 if (otherUserId.isEmpty) {
                   return const SizedBox.shrink();
@@ -1764,7 +2487,10 @@ class MessagesTab extends StatelessWidget {
                     }
 
                     final otherUser =
-                    UserModel.fromFirestore(userSnapshot.data!, null);
+                    UserModel.fromFirestore(
+                        userSnapshot.data! as DocumentSnapshot<Map<String, dynamic>>,
+                        null
+                    );
                     final lastMessage = chat['lastMessage'] as String?;
                     final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
                     final unreadCount =
@@ -1915,7 +2641,10 @@ class ProfileTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final userData = UserModel.fromFirestore(snapshot.data!, null);
+        final userData = UserModel.fromFirestore(
+            snapshot.data! as DocumentSnapshot<Map<String, dynamic>>,
+            null
+        );
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),

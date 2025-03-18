@@ -30,6 +30,7 @@ dependencies:
   flutter_chat_bubble: ^2.0.2
   animate_do: ^4.2.0
   firebase_analytics: ^11.4.4
+  badges: ^3.1.2
   geolocator: ^13.0.2
   http:
   file_picker: ^9.1.0
