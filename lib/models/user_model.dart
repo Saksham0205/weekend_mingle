@@ -70,9 +70,42 @@ class UserModel {
 
   factory UserModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> snapshot,
-      SnapshotOptions? options,
+      [SnapshotOptions? options]
       ) {
     final data = snapshot.data()!;
+    return UserModel(
+      uid: snapshot.id,
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      profession: data['profession'] ?? '',
+      photoUrl: data['photoUrl'],
+      bio: data['bio'],
+      interests: (data['interests'] != null) ? List<String>.from(data['interests'] as List<dynamic>) : [],
+      location: data['location'],
+      company: data['company'],
+      locationName: data['locationName'],
+      lastActive: (data['lastActive'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      weekendInterests: (data['weekendInterests'] != null) ? List<String>.from(data['weekendInterests'] as List<dynamic>) : [],
+      availability: Map<String, bool>.from(data['availability'] ?? {}),
+      industry: data['industry'],
+      skills: (data['skills'] != null) ? List<String>.from(data['skills'] as List<dynamic>) : [],
+      openToNetworking: data['openToNetworking'] ?? true,
+      friends: (data['friends'] != null) ? List<String>.from(data['friends'] as List<dynamic>) : [],
+      pendingFriendRequests: (data['pendingFriendRequests'] != null) ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>) : [],
+      sentFriendRequests: (data['sentFriendRequests'] != null) ? List<String>.from(data['sentFriendRequests'] as List<dynamic>) : [],
+      linkedin: data['linkedin'],
+      github: data['github'],
+      twitter: data['twitter'],
+      personalityAnswers: data['personalityAnswers'] != null
+          ? Map<String, String>.from(data['personalityAnswers'])
+          : null,
+    );
+  }
+
+  // Overload for non-generic DocumentSnapshot
+  factory UserModel.fromFirestore(DocumentSnapshot snapshot) {
+    final data = snapshot.data() as Map<String, dynamic>;
     return UserModel(
       uid: snapshot.id,
       name: data['name'] ?? '',

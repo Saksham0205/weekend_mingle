@@ -63,6 +63,7 @@ class NotificationProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
+  bool get hasUnreadNotifications => _notifications.any((n) => !n.isRead);
 
   void initializeNotifications(String? userId) {
     // If the user ID is the same, don't reinitialize

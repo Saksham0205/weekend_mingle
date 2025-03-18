@@ -144,113 +144,77 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Stream<List<Widget>> _buildMainFeed() async* {
+  Widget _buildMainFeed() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      yield [
-        Center(
-          child: Text("You must be logged in to view the feed"),
-        )
-      ];
-      return;
-    }
-
-    final currentUserDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-
-    if (!currentUserDoc.exists) {
-      yield [
-        Center(
-          child: Text("User profile not found"),
-        )
-      ];
-      return;
-    }
-
-    final currentUser = UserModel.fromFirestore(currentUserDoc);
-    final currentUserName = currentUser.name ?? "Anonymous";
-
-    if (currentUser == null) {
-      yield [
-        Center(
-          child: Text("User profile not found"),
-        )
-      ];
-      return;
+      return Center(
+        child: Text("You must be logged in to view the feed"),
+      );
     }
 
     final feedProvider = Provider.of<feed.FeedProvider>(context, listen: false);
+
     if (feedProvider.isLoading) {
-      yield [
-        const Center(child: CircularProgressIndicator()),
-      ];
-      return;
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (feedProvider.error != null) {
-      yield [
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Error: ${feedProvider.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final userProvider = Provider.of<UserProvider>(context, listen: false);
-                  feedProvider.initializeFeed(userProvider.user?.uid);
-                },
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      ];
-      return;
-    }
-
-    yield [
-      RefreshIndicator(
-        onRefresh: () async {
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
-          feedProvider.initializeFeed(userProvider.user?.uid);
-        },
-        child: ListView(
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            StoriesWidget(),
-            _buildRecommendedPeopleSection(),
-            _buildTrendingWeekendPlansSection(),
-            _buildExploreEventsSection(),
-            _buildActiveUsersSection(),
-            ...feedProvider.posts.map((feedPost) => _buildPostCard(
-                Post(
-                  id: feedPost.id,
-                  userId: feedPost.userId,
-                  userName: feedPost.userName,
-                  userPhotoUrl: feedPost.userPhotoUrl,
-                  content: feedPost.content,
-                  imageUrl: feedPost.imageUrl,
-                  timestamp: feedPost.timestamp,
-                  likes: feedPost.likes,
-                  comments: feedPost.comments.map((comment) =>
-                      Comment(
-                        userId: comment.userId,
-                        userName: comment.userName,
-                        userPhotoUrl: comment.userPhotoUrl,
-                        content: comment.content,
-                        timestamp: comment.timestamp,
-                      )
-                  ).toList(),
-                )
-            )).toList(),
+            Text(
+              'Error: ${feedProvider.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                feedProvider.initializeFeed(userProvider.user?.uid);
+              },
+              child: const Text('Retry'),
+            ),
           ],
         ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        feedProvider.initializeFeed(userProvider.user?.uid);
+      },
+      child: ListView(
+        children: [
+          StoriesWidget(),
+          _buildRecommendedPeopleSection(),
+          _buildTrendingWeekendPlansSection(),
+          _buildExploreEventsSection(),
+          _buildActiveUsersSection(),
+          ...feedProvider.posts.map((feedPost) => _buildPostCard(
+              Post(
+                id: feedPost.id,
+                userId: feedPost.userId,
+                userName: feedPost.userName,
+                userPhotoUrl: feedPost.userPhotoUrl,
+                content: feedPost.content,
+                imageUrl: feedPost.imageUrl,
+                timestamp: feedPost.timestamp,
+                likes: feedPost.likes,
+                comments: feedPost.comments.map((comment) =>
+                    Comment(
+                      userId: comment.userId,
+                      userName: comment.userName,
+                      userPhotoUrl: comment.userPhotoUrl,
+                      content: comment.content,
+                      timestamp: comment.timestamp,
+                    )
+                ).toList(),
+              )
+          )).toList(),
+        ],
       ),
-    ];
+    );
   }
 
   // 1. Stories & Quick Updates Section
@@ -511,12 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       final doc = usersToShow[index];
                       try {
-                        final userData = doc.data() as Map<String, dynamic>;
-                        final user = UserModel.fromFirestore(
-                            doc as DocumentSnapshot<Map<String, dynamic>>,
-                            null
-                        );
-
+                        final user = userFromDoc(doc);
                         return _buildUserConnectionCard(user);
                       } catch (e) {
                         print('Error parsing user data at index $index: $e');
@@ -1069,10 +1028,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemBuilder: (context, index) {
                   final doc = onlineUsers[index];
                   try {
-                    final user = UserModel.fromFirestore(
-                        doc as DocumentSnapshot<Map<String, dynamic>>,
-                        null
-                    );
+                    final user = userFromDoc(doc);
                     return _buildActiveUserItem(user);
                   } catch (e) {
                     print('Error parsing online user: $e');
@@ -1406,6 +1362,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               builder: (context) => ChatScreen(
                                                 otherUser: user,
                                                 chatId: '${currentUser.uid}_${user.uid}',
+                                                otherUserName: user.name,
                                               ),
                                             ),
                                           );
@@ -1974,6 +1931,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context) => ChatScreen(
                       otherUser: otherUser,
                       chatId: chatId,
+                      otherUserName: otherUser.name,
                     ),
                   ),
                 );
@@ -2013,128 +1971,128 @@ class _HomeScreenState extends State<HomeScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-      ListTile(
-      leading: CircleAvatar(
-      backgroundImage: post.userPhotoUrl != null
-      ? CachedNetworkImageProvider(post.userPhotoUrl!)
-          : null,
-      child: post.userPhotoUrl == null ? const Icon(Icons.person) : null,
-    ),
-    title: Text(post.userName),
-    subtitle: Text(timeago.format(post.timestamp)),
-    trailing: PopupMenuButton(
-    itemBuilder: (context) => [
-    if (currentUser?.uid == post.userId)
-    const PopupMenuItem(
-    value: 'delete',
-    child: Text('Delete'),
-    ),
-    const PopupMenuItem(
-    value: 'report',
-    child: Text('Report'),
-    ),
-    ],
-    onSelected: (value) {
-    if (value == 'delete') {
-    Provider.of<feed.FeedProvider>(context, listen: false)
-        .deletePost(post.id);
-    }
-    },
-    ),
-    ),
-    if (post.imageUrl != null)
-    CachedNetworkImage(
-    imageUrl: post.imageUrl!,
-    fit: BoxFit.cover,
-    width: double.infinity,
-    placeholder: (context, url) => const Center(
-    child: CircularProgressIndicator(),
-    ),
-    errorWidget: (context, url, error) => const Icon(Icons.error),
-    ),
-    Padding(
-    padding: const EdgeInsets.all(16),
-    child: Text(post.content),
-    ),
-    Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [
-      IconButton(
-        icon: Icon(
-          post.likes.contains(currentUser?.uid)
-              ? Icons.favorite
-              : Icons.favorite_border,
-        ),
-        color: post.likes.contains(currentUser?.uid) ? Colors.red : null, // Move color here
-        onPressed: () {
-          if (currentUser != null) {
-            Provider.of<feed.FeedProvider>(context, listen: false)
-                .likePost(post.id, currentUser.uid);
-          }
-        },
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundImage: post.userPhotoUrl != null
+                  ? CachedNetworkImageProvider(post.userPhotoUrl!)
+                  : null,
+              child: post.userPhotoUrl == null ? const Icon(Icons.person) : null,
+            ),
+            title: Text(post.userName),
+            subtitle: Text(timeago.format(post.timestamp)),
+            trailing: PopupMenuButton(
+              itemBuilder: (context) => [
+                if (currentUser?.uid == post.userId)
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete'),
+                  ),
+                const PopupMenuItem(
+                  value: 'report',
+                  child: Text('Report'),
+                ),
+              ],
+              onSelected: (value) {
+                if (value == 'delete') {
+                  Provider.of<feed.FeedProvider>(context, listen: false)
+                      .deletePost(post.id);
+                }
+              },
+            ),
+          ),
+          if (post.imageUrl != null)
+            CachedNetworkImage(
+              imageUrl: post.imageUrl!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              errorWidget: (context, url, error) => const Icon(Icons.error),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(post.content),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: Icon(
+                  post.likes.contains(currentUser?.uid)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                ),
+                color: post.likes.contains(currentUser?.uid) ? Colors.red : null, // Move color here
+                onPressed: () {
+                  if (currentUser != null) {
+                    Provider.of<feed.FeedProvider>(context, listen: false)
+                        .likePost(post.id, currentUser.uid);
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.comment_outlined),
+                onPressed: () {
+                  // Show comment dialog
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                onPressed: () {
+                  // Handle share
+                },
+              ),
+            ],
+          ),
+          if (post.likes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '${post.likes.length} ${post.likes.length == 1 ? 'like' : 'likes'}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          if (post.comments.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Comments',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: post.comments.length > 2 ? 2 : post.comments.length,
+              itemBuilder: (context, index) {
+                final comment = post.comments[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: comment.userPhotoUrl != null
+                        ? CachedNetworkImageProvider(comment.userPhotoUrl!)
+                        : null,
+                    child: comment.userPhotoUrl == null
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
+                  title: Text(comment.userName),
+                  subtitle: Text(comment.content),
+                );
+              },
+            ),
+            if (post.comments.length > 2)
+              TextButton(
+                onPressed: () {
+                  // Show all comments
+                },
+                child: Text('View all ${post.comments.length} comments'),
+              ),
+          ],
+        ],
       ),
-      IconButton(
-    icon: const Icon(Icons.comment_outlined),
-    onPressed: () {
-    // Show comment dialog
-    },
-    ),
-    IconButton(
-    icon: const Icon(Icons.share_outlined),
-    onPressed: () {
-    // Handle share
-    },
-    ),
-    ],
-    ),
-    if (post.likes.isNotEmpty)
-    Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Text(
-    '${post.likes.length} ${post.likes.length == 1 ? 'like' : 'likes'}',
-    style: const TextStyle(fontWeight: FontWeight.bold),
-    ),
-    ),
-    if (post.comments.isNotEmpty) ...[
-    const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 16),
-    child: Text(
-    'Comments',
-    style: TextStyle(fontWeight: FontWeight.bold),
-    ),
-    ),
-    ListView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: post.comments.length > 2 ? 2 : post.comments.length,
-    itemBuilder: (context, index) {
-    final comment = post.comments[index];
-    return ListTile(
-    leading: CircleAvatar(
-    backgroundImage: comment.userPhotoUrl != null
-    ? CachedNetworkImageProvider(comment.userPhotoUrl!)
-        : null,
-    child: comment.userPhotoUrl == null
-    ? const Icon(Icons.person)
-        : null,
-    ),
-    title: Text(comment.userName),
-    subtitle: Text(comment.content),
-    );
-    },
-    ),
-    if (post.comments.length > 2)
-    TextButton(
-    onPressed: () {
-    // Show all comments
-    },
-    child: Text('View all ${post.comments.length} comments'),
-    ),
-    ],
-    ],
-    ),
     );
   }
 }
@@ -2350,6 +2308,8 @@ class MessagesTab extends StatelessWidget {
         builder: (context) => ChatScreen(
           otherUser: otherUser,
           chatId: chatId,
+          otherUserName: otherUser.name,
+
         ),
       ),
     );
@@ -2501,11 +2461,7 @@ class MessagesTab extends StatelessWidget {
                       return const SizedBox.shrink();
                     }
 
-                    final otherUser =
-                    UserModel.fromFirestore(
-                        userSnapshot.data! as DocumentSnapshot<Map<String, dynamic>>,
-                        null
-                    );
+                    final otherUser = userFromDoc(userSnapshot.data!);
                     final lastMessage = chat['lastMessage'] as String?;
                     final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
                     final unreadCount =
@@ -2656,10 +2612,7 @@ class ProfileTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final userData = UserModel.fromFirestore(
-            snapshot.data! as DocumentSnapshot<Map<String, dynamic>>,
-            null
-        );
+        final userData = userFromDoc(snapshot.data!);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -2768,5 +2721,17 @@ class ProfileTab extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+// Helper function for firestore document conversions
+UserModel userFromDoc(dynamic doc) {
+  if (doc is QueryDocumentSnapshot) {
+    final data = doc.data() as Map<String, dynamic>;
+    return UserModel.fromMap(data, doc.id);
+  } else if (doc is DocumentSnapshot) {
+    return UserModel.fromFirestore(doc);
+  } else {
+    throw Exception('Unsupported document type');
   }
 }

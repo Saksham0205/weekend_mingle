@@ -41,10 +41,7 @@ class UserDataService {
         final data = userDoc.data() as Map<String, dynamic>;
         print('Firestore data received: ${data.keys}');
 
-        _cachedUser = UserModel.fromFirestore(
-            userDoc as DocumentSnapshot<Map<String, dynamic>>,
-            null
-        );
+        _cachedUser = UserModel.fromFirestore(userDoc);
         _lastFetchTime = DateTime.now();
         return _cachedUser;
       } else {

@@ -61,7 +61,6 @@ class _FriendsTabState extends State<FriendsTab> with SingleTickerProviderStateM
           builder: (context) => ChatScreen(
             otherUser: otherUser,
             chatId: chatDocRef.id,
-            otherUserName: otherUser.name,
           ),
         ),
       );
@@ -798,10 +797,7 @@ class _FriendsTabState extends State<FriendsTab> with SingleTickerProviderStateM
                   return const SizedBox(height: 0);
                 }
 
-                final sender = UserModel.fromFirestore(
-                  snapshot.data! as DocumentSnapshot<Map<String, dynamic>>,
-                  null,
-                );
+                final sender = UserModel.fromFirestore(snapshot.data!);
 
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),

@@ -41,17 +41,16 @@ class Message {
     );
   }
 
-  Map<String, dynamic> get data => {
-
-      'senderId': senderId,
-      'senderName': senderName,
-      'senderPhotoUrl': senderPhotoUrl,
-      'content': content,
-      'imageUrl': imageUrl,
-      'timestamp': Timestamp.fromDate(timestamp),
-      'isRead': isRead,
-      'type': type,
-      'readBy': readBy,
+  Map<String, dynamic> toMap() => {
+    'senderId': senderId,
+    'senderName': senderName,
+    'senderPhotoUrl': senderPhotoUrl,
+    'content': content,
+    'imageUrl': imageUrl,
+    'timestamp': Timestamp.fromDate(timestamp),
+    'isRead': isRead,
+    'type': type,
+    'readBy': readBy,
   };
 
   Message copyWith({

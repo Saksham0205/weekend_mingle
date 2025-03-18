@@ -25,7 +25,7 @@ class GroupService {
 
     // Get user data
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = UserModel.fromFirestore(userDoc, null);
+    final userData = UserModel.fromFirestore(userDoc);
 
     // Upload image to Cloudinary if provided
     String? imageUrl;
@@ -90,7 +90,7 @@ class GroupService {
 
     // Get user location
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = UserModel.fromFirestore(userDoc, null);
+    final userData = UserModel.fromFirestore(userDoc);
 
     if (userData.location == null) {
       throw Exception("User location not available");

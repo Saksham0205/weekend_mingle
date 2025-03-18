@@ -99,7 +99,7 @@ class FriendService {
         .where('friends', arrayContains: userId)
         .snapshots()
         .map((snapshot) => snapshot.docs
-        .map((doc) => UserModel.fromFirestore(doc, null))
+        .map((doc) => UserModel.fromFirestore(doc))
         .toList());
   }
 
@@ -110,7 +110,7 @@ class FriendService {
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .map((snapshot) => snapshot.docs
-        .map((doc) => FriendRequestModel.fromFirestore(doc, null))
+        .map((doc) => FriendRequestModel.fromFirestore(doc))
         .toList());
   }
 
@@ -118,7 +118,7 @@ class FriendService {
     final user = await _firestore.collection('users').doc(userId1).get();
     if (!user.exists) return false;
 
-    final userData = UserModel.fromFirestore(user, null);
+    final userData = UserModel.fromFirestore(user);
     return userData.friends.contains(userId2);
   }
 
