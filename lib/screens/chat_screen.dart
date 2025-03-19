@@ -10,6 +10,10 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter_chat_bubble/chat_bubble.dart';
 import 'package:flutter_chat_bubble/bubble_type.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../models/user_model.dart';
 import '../models/message_model.dart';
 import '../services/auth_service.dart';
@@ -37,6 +41,8 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
+  final _audioRecorder = Record();
+  final _audioPlayer = AudioPlayer();
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final _authService = AuthService();
@@ -51,38 +57,78 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   List<Message> _messages = [];
   bool _isLoading = true;
   StreamSubscription? _messagesSubscription;
+  UserModel? _otherUser;
 
   @override
   void initState() {
     super.initState();
-    _checkFriendshipStatus();
-    _markMessagesAsRead();
+    _otherUser = widget.otherUser;
+    _initializeChat();
     _messageController.addListener(_onTypingChanged);
-    _setupMessagesListener();
+  }
+
+  Future<void> _initializeChat() async {
+    try {
+      if (!widget.isGroupChat && _otherUser == null) {
+        // Fetch chat data to get other user's ID
+        final chatDoc = await FirebaseFirestore.instance
+            .collection('chats')
+            .doc(widget.chatId)
+            .get();
+        final participants =
+        List<String>.from(chatDoc.data()?['participants'] ?? []);
+        final currentUserId = _authService.currentUser?.uid;
+        final otherUserId = participants.firstWhere((id) => id != currentUserId,
+            orElse: () => '');
+
+        if (otherUserId.isNotEmpty) {
+          // Fetch other user's data
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(otherUserId)
+              .get();
+          if (mounted) {
+            setState(() {
+              _otherUser = UserModel.fromDocumentSnapshot(userDoc);
+            });
+          }
+        }
+      }
+
+      await _checkFriendshipStatus();
+      await _markMessagesAsRead();
+      _setupMessagesListener();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error initializing chat: $e')),
+        );
+      }
+    }
   }
 
   void _setupMessagesListener() {
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
 
-    _messagesSubscription = _chatService.getChatMessages(widget.chatId)
-        .listen((messages) {
-      if (mounted) {
-        setState(() {
-          _messages = messages;
-          _isLoading = false;
-        });
+    _messagesSubscription =
+        _chatService.getChatMessages(widget.chatId).listen((messages) {
+          if (mounted) {
+            setState(() {
+              _messages = messages;
+              _isLoading = false;
+            });
 
-        // Mark messages as read when new messages arrive
-        _markMessagesAsRead();
-      }
-    }, onError: (error) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
+            // Mark messages as read when new messages arrive
+            _markMessagesAsRead();
+          }
+        }, onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
         });
-      }
-    });
   }
 
   @override
@@ -240,8 +286,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     String? text,
     String? fileUrl,
     String? fileType,
+    String? voiceUrl,
+    int? voiceDuration,
   }) async {
-    if ((text == null || text.isEmpty) && fileUrl == null) return;
+    if ((text == null || text.isEmpty) && fileUrl == null && voiceUrl == null) return;
 
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
@@ -252,6 +300,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       await _chatService.sendMessage(
         chatId: widget.chatId,
         content: text ?? '',
+        voiceUrl: voiceUrl,
+        voiceDuration: voiceDuration,
         imageUrl: fileUrl,
         type: fileType ?? 'text',
       );
@@ -300,7 +350,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Future<void> _blockUser() async {
     final currentUser = _authService.currentUser;
-    if (currentUser == null) return;
+    if (currentUser == null || widget.otherUser == null) return;
 
     try {
       await FirebaseFirestore.instance
@@ -357,6 +407,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     if (reason != null) {
       try {
+        if (widget.otherUser == null) {
+          throw Exception('Cannot report: User information not available');
+        }
         await FirebaseFirestore.instance.collection('reports').add({
           'reportedUser': widget.otherUser!.uid,
           'reportedBy': _authService.currentUser?.uid,
@@ -590,7 +643,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         // If the deleted message was the last message
         if (lastMessageSenderId == currentUser.uid &&
             messageDoc.data()?['timestamp'] == lastMessageTime) {
-
           // Find the new last message
           final lastMessageQuery = await FirebaseFirestore.instance
               .collection('chats')
@@ -606,7 +658,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
             // Update the chat document with the new last message
             final displayText = newLastMessageData['text'] ??
-                (newLastMessageData['fileType'] == 'image' ? '📷 Photo' : '📎 File');
+                (newLastMessageData['fileType'] == 'image'
+                    ? '📷 Photo'
+                    : '📎 File');
 
             await FirebaseFirestore.instance
                 .collection('chats')
@@ -643,6 +697,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _showErrorSnackbar('Error deleting message: $e');
     }
   }
+
   Future<void> _deleteEntireChat() async {
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
@@ -653,7 +708,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Conversation'),
-          content: Text('Are you sure you want to delete your entire chat with ${widget.otherUserName}? This cannot be undone.'),
+          content: Text(
+              'Are you sure you want to delete your entire chat with ${widget.otherUserName}? This cannot be undone.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -763,14 +819,28 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.emoji_emotions_outlined),
-              title: const Text('React to message'),
-              onTap: () {
-                Navigator.pop(context);
-                _showReactionPicker(messageId);
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            IconButton(
+              icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+              onPressed: _isRecording ? _stopRecording : _startRecording,
+              color: _isRecording ? Colors.red : null,
+            ),
+            IconButton(
+              icon: const Icon(Icons.photo_camera),
+              onPressed: _pickImage,
+            ),
+            IconButton(
+              icon: const Icon(Icons.emoji_emotions_outlined),
+              onPressed: () {
+                setState(() {
+                  _showEmoji = !_showEmoji;
+                });
               },
             ),
+          ],
+        ),
             ListTile(
               leading: const Icon(Icons.reply),
               title: const Text('Reply'),
@@ -801,7 +871,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             if (isCurrentUserMessage)
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Delete message', style: TextStyle(color: Colors.red)),
+                title: const Text('Delete message',
+                    style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   _deleteMessage(messageId);
@@ -811,6 +882,66 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  bool _isRecording = false;
+  String? _recordedVoicePath;
+  Timer? _recordingTimer;
+  int _recordingDuration = 0;
+
+  Future<void> _startRecording() async {
+    try {
+      final hasPermission = await Permission.microphone.request().isGranted;
+      if (!hasPermission) {
+        _showErrorSnackbar('Microphone permission denied');
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      _recordedVoicePath = '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
+
+      await _audioRecorder.start(
+        path: _recordedVoicePath!,
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        samplingRate: 44100,
+      );
+
+      setState(() {
+        _isRecording = true;
+        _recordingDuration = 0;
+      });
+
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        setState(() {
+          _recordingDuration++;
+        });
+      });
+    } catch (e) {
+      _showErrorSnackbar('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      _recordingTimer?.cancel();
+      final path = await _audioRecorder.stop();
+      setState(() => _isRecording = false);
+
+      if (path != null) {
+        final file = File(path);
+        final url = await CloudinaryService.uploadFile(file);
+        if (url != null) {
+          await _sendMessage(
+            voiceUrl: url,
+            voiceDuration: _recordingDuration,
+            fileType: 'voice',
+          );
+        }
+      }
+    } catch (e) {
+      _showErrorSnackbar('Error stopping recording: $e');
+    }
   }
   Widget _attachmentOption({
     required IconData icon,
@@ -862,6 +993,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final bubbleMargin = isFirstInGroup
         ? const EdgeInsets.only(top: 10)
         : const EdgeInsets.only(top: 2);
+    final text = message['text'] as String? ?? '';
+    final fileUrl = message['fileUrl'] as String? ?? '';
+    final type = message['type'] as String? ?? 'text';
 
     return FadeIn(
       duration: const Duration(milliseconds: 300),
@@ -873,24 +1007,24 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         child: Padding(
           padding: bubbleMargin,
           child: Row(
-            mainAxisAlignment: isCurrentUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+            mainAxisAlignment:
+            isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Show avatar only for other user's messages and if it's the last in group
-              if (!isCurrentUser && isLastInGroup)
+              if (!isCurrentUser && isLastInGroup && widget.otherUser != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: CircleAvatar(
                     radius: 12,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    backgroundImage: widget.otherUser!.photoUrl != null &&
+                    backgroundColor:
+                    Theme.of(context).primaryColor.withOpacity(0.1),
+                    backgroundImage: widget.otherUser?.photoUrl != null &&
                         widget.otherUser!.photoUrl!.isNotEmpty
-                        ? CachedNetworkImageProvider(widget.otherUser!.photoUrl!)
-                    as ImageProvider
+                        ? CachedNetworkImageProvider(
+                        widget.otherUser!.photoUrl!) as ImageProvider
                         : null,
-                    child: widget.otherUser!.photoUrl == null ||
+                    child: widget.otherUser?.photoUrl == null ||
                         widget.otherUser!.photoUrl!.isEmpty
                         ? Text(
                       widget.otherUserName[0].toUpperCase(),
@@ -908,10 +1042,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 const SizedBox(width: 32),
 
               // The message content column - this should always be shown
-              Flexible(  // Make this flexible to ensure proper layout
+              Flexible(
+                // Make this flexible to ensure proper layout
                 child: Column(
-                  crossAxisAlignment:
-                  isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: isCurrentUser
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
                   children: [
                     ChatBubble(
                       clipper: ChatBubbleClipper5(
@@ -920,7 +1056,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             : BubbleType.receiverBubble,
                         radius: radius,
                       ),
-                      alignment: isCurrentUser ? Alignment.topRight : Alignment.topLeft,
+                      alignment: isCurrentUser
+                          ? Alignment.topRight
+                          : Alignment.topLeft,
                       margin: const EdgeInsets.only(top: 2),
                       backGroundColor: isCurrentUser
                           ? Theme.of(context).primaryColor
@@ -932,14 +1070,39 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (message['text'] != null && message['text'].isNotEmpty)
+                            if (message['text'] != null &&
+                                message['text'].isNotEmpty)
                               Text(
                                 message['text'] as String,
                                 style: TextStyle(
-                                  color: isCurrentUser ? Colors.white : Colors.black87,
+                                  color: isCurrentUser
+                                      ? Colors.white
+                                      : Colors.black87,
                                 ),
                               ),
-                            if (message['fileUrl'] != null) ...[
+                             if (type == 'voice') ...[  // Voice message UI
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.play_arrow,
+                                      color: isCurrentUser ? Colors.white : Colors.black87,
+                                    ),
+                                    onPressed: () {
+                                      // Implement voice playback
+                                    },
+                                  ),
+                                  Text(
+                                    '${message['voiceDuration']} sec',
+                                    style: TextStyle(
+                                      color: isCurrentUser ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ]
+                            else if (message['fileUrl'] != null) ...[
                               // Rest of your file handling code
                             ],
                             // Reactions display code
@@ -947,13 +1110,31 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
+                    if (isCurrentUser && isLastInGroup) ...[  // Message status indicators
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            message['deliveredTo']?.contains(widget.otherUser?.uid) ?? false
+                                ? (message['readBy']?.contains(widget.otherUser?.uid) ?? false
+                                ? Icons.done_all
+                                : Icons.done)
+                                : Icons.access_time,
+                            size: 16,
+                            color: message['readBy']?.contains(widget.otherUser?.uid) ?? false
+                                ? Colors.blue
+                                : Colors.grey[400],
+                          ),
+                        ],
+                      ),
+                    ],
                     // Timestamp display
                   ],
                 ),
               ),
               // Add some spacing at the end for current user messages
-              if (isCurrentUser)
-                const SizedBox(width: 4),
+              if (isCurrentUser) const SizedBox(width: 4),
             ],
           ),
         ),
@@ -985,19 +1166,22 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         title: Row(
           children: [
             Hero(
-              tag: 'chat-${widget.otherUser!.uid}',
+              tag: 'chat-${_otherUser?.uid ?? widget.chatId}',
               child: CircleAvatar(
                 radius: 20,
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                backgroundImage: widget.otherUser!.photoUrl != null &&
-                    widget.otherUser!.photoUrl!.isNotEmpty
-                    ? CachedNetworkImageProvider(widget.otherUser!.photoUrl!)
+                backgroundColor:
+                Theme.of(context).primaryColor.withOpacity(0.1),
+                backgroundImage: _otherUser?.photoUrl != null &&
+                    _otherUser!.photoUrl!.isNotEmpty
+                    ? CachedNetworkImageProvider(_otherUser!.photoUrl!)
                 as ImageProvider
                     : null,
-                child: widget.otherUser!.photoUrl == null ||
-                    widget.otherUser!.photoUrl!.isEmpty
+                child: _otherUser?.photoUrl == null ||
+                    (_otherUser?.photoUrl?.isEmpty ?? true)
                     ? Text(
-                  widget.otherUserName[0].toUpperCase(),
+                  widget.otherUserName.isNotEmpty
+                      ? widget.otherUserName[0].toUpperCase()
+                      : '?',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1032,15 +1216,22 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) return const SizedBox.shrink();
 
-                        final data = snapshot.data?.data() as Map<String, dynamic>?;
+                        final data =
+                        snapshot.data?.data() as Map<String, dynamic>?;
                         final isTyping =
-                            data?['${widget.otherUser!.uid}_typing'] as bool? ?? false;
+                            data?['${widget.otherUser?.uid ?? "unknown"}_typing']
+                            as bool? ??
+                                false;
 
                         return Text(
-                          isTyping ? 'typing...' : widget.otherUser!.profession,
+                          isTyping
+                              ? 'typing...'
+                              : (widget.otherUser?.profession ?? 'Unknown'),
                           style: TextStyle(
                             fontSize: 12,
-                            color: isTyping ? Theme.of(context).primaryColor : Colors.grey,
+                            color: isTyping
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey,
                           ),
                         );
                       },
@@ -1168,7 +1359,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   : _messages.isEmpty
                   ? Center(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.chat_bubble_outline,
@@ -1202,7 +1394,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 itemBuilder: (context, index) {
                   final message = _messages[index];
                   final messageId = message.id;
-                  final isCurrentUser = message.senderId == currentUser.uid;
+                  final isCurrentUser =
+                      message.senderId == currentUser.uid;
                   final timestamp = message.timestamp;
 
                   // Determine if this message is part of a group
@@ -1210,20 +1403,26 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   bool isLastInGroup = true;
 
                   if (index > 0) {
-                    final prevMessage = _messages[index - 1];
-                    isFirstInGroup = prevMessage.senderId != message.senderId;
+                    final prevMessage =
+                    _messages[index - 1];
+                    isFirstInGroup = prevMessage.senderId !=
+                        message.senderId;
                   }
 
                   if (index < _messages.length - 1) {
-                    final nextMessage = _messages[index + 1];
-                    isLastInGroup = nextMessage.senderId != message.senderId;
+                    final nextMessage =
+                    _messages[index + 1];
+                    isLastInGroup = nextMessage.senderId !=
+                        message.senderId;
                   }
 
                   return _buildMessageBubble(
                     {
                       'text': message.content,
-                      'fileUrl': message.imageUrl,
-                      'senderId': message.senderId
+                      'fileUrl': message.imageUrl ?? '',
+                      'senderId': message.senderId,
+                      'type': message.type,
+                      'senderName': message.senderName
                     },
                     isCurrentUser,
                     isFirstInGroup,
@@ -1257,7 +1456,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       });
                     },
                     icon: Icon(
-                      _showEmoji ? Icons.keyboard : Icons.emoji_emotions_outlined,
+                      _showEmoji
+                          ? Icons.keyboard
+                          : Icons.emoji_emotions_outlined,
                       color: Colors.grey[600],
                     ),
                   ),
@@ -1275,7 +1476,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           color: Colors.grey[500],
                         ),
                       ),
-                      textCapitalization: TextCapitalization.sentences,
+                      textCapitalization:
+                      TextCapitalization.sentences,
                       keyboardType: TextInputType.multiline,
                       maxLines: null,
                       onSubmitted: (text) {
@@ -1306,7 +1508,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       }
                           : _isSendingMessage
                           ? null
-                          : () => _sendMessage(text: _messageController.text),
+                          : () => _sendMessage(
+                          text: _messageController.text),
                       icon: _isSendingMessage
                           ? const SizedBox(
                         width: 24,

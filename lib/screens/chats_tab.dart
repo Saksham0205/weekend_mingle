@@ -78,7 +78,8 @@ class _ChatsTabState extends State<ChatsTab> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const HomeScreen(initialTabIndex: 1),
+                        builder: (context) =>
+                        const HomeScreen(initialTabIndex: 1),
                       ),
                     );
                   },
@@ -110,9 +111,7 @@ class _ChatsTabState extends State<ChatsTab> {
                         : null,
                     child: otherParticipantPhoto == null
                         ? Icon(
-                      chat.isGroupChat
-                          ? Icons.group
-                          : Icons.person,
+                      chat.isGroupChat ? Icons.group : Icons.person,
                       color: Colors.white,
                     )
                         : null,
@@ -155,7 +154,9 @@ class _ChatsTabState extends State<ChatsTab> {
                     _formatTimestamp(chat.lastMessageAt),
                     style: TextStyle(
                       fontSize: 12,
-                      color: unreadCount > 0 ? Theme.of(context).primaryColor : Colors.grey,
+                      color: unreadCount > 0
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -178,7 +179,7 @@ class _ChatsTabState extends State<ChatsTab> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ChatScreen(
+                    builder: (context) =>   ChatScreen(
                       chatId: chat.id,
                       otherUserName: otherParticipantName,
                       isGroupChat: chat.isGroupChat,
@@ -197,7 +198,8 @@ class _ChatsTabState extends State<ChatsTab> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-    final messageDate = DateTime(timestamp.year, timestamp.month, timestamp.day);
+    final messageDate =
+    DateTime(timestamp.year, timestamp.month, timestamp.day);
 
     if (messageDate == today) {
       return DateFormat.jm().format(timestamp); // e.g., "2:30 PM"
@@ -249,7 +251,8 @@ class _ChatsTabState extends State<ChatsTab> {
       body: _buildChatList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          final userProvider =
+          Provider.of<UserProvider>(context, listen: false);
           if (userProvider.user != null) {
             _showContactsBottomSheet();
           }
@@ -312,7 +315,8 @@ class _ChatsTabState extends State<ChatsTab> {
 
                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                         return const Center(
-                          child: Text('No friends found. Add friends to start chatting.'),
+                          child: Text(
+                              'No friends found. Add friends to start chatting.'),
                         );
                       }
 
@@ -324,7 +328,10 @@ class _ChatsTabState extends State<ChatsTab> {
                           final friendId = friendDoc.id;
 
                           return FutureBuilder<DocumentSnapshot>(
-                            future: _firestore.collection('users').doc(friendId).get(),
+                            future: _firestore
+                                .collection('users')
+                                .doc(friendId)
+                                .get(),
                             builder: (context, friendSnapshot) {
                               if (!friendSnapshot.hasData) {
                                 return const ListTile(
@@ -335,15 +342,20 @@ class _ChatsTabState extends State<ChatsTab> {
                                 );
                               }
 
-                              final friendData = friendSnapshot.data!.data() as Map<String, dynamic>;
-                              final friend = UserModel.fromMap(friendData, friendId);
+                              final friendData = friendSnapshot.data!.data()
+                              as Map<String, dynamic>;
+                              final friend =
+                              UserModel.fromMap(friendData, friendId);
 
                               return ListTile(
                                 leading: CircleAvatar(
                                   backgroundImage: friend.photoUrl != null
-                                      ? CachedNetworkImageProvider(friend.photoUrl!)
+                                      ? CachedNetworkImageProvider(
+                                      friend.photoUrl!)
                                       : null,
-                                  child: friend.photoUrl == null ? const Icon(Icons.person) : null,
+                                  child: friend.photoUrl == null
+                                      ? const Icon(Icons.person)
+                                      : null,
                                 ),
                                 title: Text(friend.name),
                                 subtitle: Text(friend.profession),
@@ -351,7 +363,8 @@ class _ChatsTabState extends State<ChatsTab> {
                                   Navigator.pop(context);
 
                                   // Create or get existing chat
-                                  final chatId = await _chatService.createOrGetChat(friend.uid);
+                                  final chatId = await _chatService
+                                      .createOrGetChat(friend.uid);
 
                                   if (!mounted) return;
 
@@ -426,19 +439,24 @@ class _ChatsTabState extends State<ChatsTab> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: _selectedContacts.isEmpty || _groupNameController.text.trim().isEmpty || _isCreatingGroupChat
+                  onPressed: _selectedContacts.isEmpty ||
+                      _groupNameController.text.trim().isEmpty ||
+                      _isCreatingGroupChat
                       ? null
                       : () async {
                     if (_groupNameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter a group name')),
+                        const SnackBar(
+                            content: Text('Please enter a group name')),
                       );
                       return;
                     }
 
                     if (_selectedContacts.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select at least one member')),
+                        const SnackBar(
+                            content: Text(
+                                'Please select at least one member')),
                       );
                       return;
                     }
@@ -463,7 +481,8 @@ class _ChatsTabState extends State<ChatsTab> {
                         MaterialPageRoute(
                           builder: (context) => ChatScreen(
                             chatId: chatId,
-                            otherUserName: _groupNameController.text.trim(),
+                            otherUserName:
+                            _groupNameController.text.trim(),
                             isGroupChat: true,
                           ),
                         ),
@@ -472,7 +491,8 @@ class _ChatsTabState extends State<ChatsTab> {
                       if (!mounted) return;
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to create group: $e')),
+                        SnackBar(
+                            content: Text('Failed to create group: $e')),
                       );
                     } finally {
                       if (mounted) {
@@ -550,22 +570,29 @@ class _ChatsTabState extends State<ChatsTab> {
                           itemBuilder: (context, index) {
                             final contactId = _selectedContacts[index];
                             return FutureBuilder<DocumentSnapshot>(
-                              future: _firestore.collection('users').doc(contactId).get(),
+                              future: _firestore
+                                  .collection('users')
+                                  .doc(contactId)
+                                  .get(),
                               builder: (context, snapshot) {
                                 if (!snapshot.hasData) {
                                   return const SizedBox(
                                     width: 60,
                                     child: Column(
                                       children: [
-                                        CircleAvatar(child: CircularProgressIndicator(strokeWidth: 2)),
+                                        CircleAvatar(
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2)),
                                         SizedBox(height: 4),
-                                        Text('Loading...', overflow: TextOverflow.ellipsis),
+                                        Text('Loading...',
+                                            overflow: TextOverflow.ellipsis),
                                       ],
                                     ),
                                   );
                                 }
 
-                                final userData = snapshot.data!.data() as Map<String, dynamic>;
+                                final userData = snapshot.data!.data()
+                                as Map<String, dynamic>;
                                 return Padding(
                                   padding: const EdgeInsets.only(right: 12),
                                   child: Column(
@@ -574,8 +601,11 @@ class _ChatsTabState extends State<ChatsTab> {
                                         children: [
                                           CircleAvatar(
                                             radius: 30,
-                                            backgroundImage: userData['photoUrl'] != null
-                                                ? CachedNetworkImageProvider(userData['photoUrl'])
+                                            backgroundImage: userData[
+                                            'photoUrl'] !=
+                                                null
+                                                ? CachedNetworkImageProvider(
+                                                userData['photoUrl'])
                                                 : null,
                                             child: userData['photoUrl'] == null
                                                 ? const Icon(Icons.person)
@@ -587,12 +617,14 @@ class _ChatsTabState extends State<ChatsTab> {
                                             child: GestureDetector(
                                               onTap: () {
                                                 setState(() {
-                                                  _selectedContacts.remove(contactId);
+                                                  _selectedContacts
+                                                      .remove(contactId);
                                                   dialogSetState(() {});
                                                 });
                                               },
                                               child: Container(
-                                                padding: const EdgeInsets.all(2),
+                                                padding:
+                                                const EdgeInsets.all(2),
                                                 decoration: BoxDecoration(
                                                   color: Colors.red,
                                                   shape: BoxShape.circle,
@@ -638,13 +670,17 @@ class _ChatsTabState extends State<ChatsTab> {
                             .collection('friends')
                             .snapshots(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
                           }
 
-                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
                             return const Center(
-                              child: Text('No friends found. Add friends to create a group.'),
+                              child: Text(
+                                  'No friends found. Add friends to create a group.'),
                             );
                           }
 
@@ -656,7 +692,10 @@ class _ChatsTabState extends State<ChatsTab> {
                               final friendId = friendDoc.id;
 
                               return FutureBuilder<DocumentSnapshot>(
-                                future: _firestore.collection('users').doc(friendId).get(),
+                                future: _firestore
+                                    .collection('users')
+                                    .doc(friendId)
+                                    .get(),
                                 builder: (context, friendSnapshot) {
                                   if (!friendSnapshot.hasData) {
                                     return const ListTile(
@@ -667,16 +706,20 @@ class _ChatsTabState extends State<ChatsTab> {
                                     );
                                   }
 
-                                  final friendData = friendSnapshot.data!.data() as Map<String, dynamic>;
-                                  final friend = UserModel.fromMap(friendData, friendId);
-                                  final isSelected = _selectedContacts.contains(friend.uid);
+                                  final friendData = friendSnapshot.data!.data()
+                                  as Map<String, dynamic>;
+                                  final friend =
+                                  UserModel.fromMap(friendData, friendId);
+                                  final isSelected =
+                                  _selectedContacts.contains(friend.uid);
 
                                   return CheckboxListTile(
                                     value: isSelected,
                                     onChanged: (value) {
                                       setState(() {
                                         if (value == true) {
-                                          if (!_selectedContacts.contains(friend.uid)) {
+                                          if (!_selectedContacts
+                                              .contains(friend.uid)) {
                                             _selectedContacts.add(friend.uid);
                                           }
                                         } else {
@@ -687,9 +730,12 @@ class _ChatsTabState extends State<ChatsTab> {
                                     },
                                     secondary: CircleAvatar(
                                       backgroundImage: friend.photoUrl != null
-                                          ? CachedNetworkImageProvider(friend.photoUrl!)
+                                          ? CachedNetworkImageProvider(
+                                          friend.photoUrl!)
                                           : null,
-                                      child: friend.photoUrl == null ? const Icon(Icons.person) : null,
+                                      child: friend.photoUrl == null
+                                          ? const Icon(Icons.person)
+                                          : null,
                                     ),
                                     title: Text(friend.name),
                                     subtitle: Text(friend.profession),
@@ -796,29 +842,46 @@ class ChatSearchDelegate extends SearchDelegate<String> {
                 backgroundImage: userData['photoUrl'] != null
                     ? CachedNetworkImageProvider(userData['photoUrl'])
                     : null,
-                child: userData['photoUrl'] == null ? const Icon(Icons.person) : null,
+                child: userData['photoUrl'] == null
+                    ? const Icon(Icons.person)
+                    : null,
               ),
               title: Text(userData['name'] ?? 'Unknown'),
               subtitle: Text(userData['profession'] ?? ''),
               onTap: () async {
-                // Create or get chat with this user
-                final chatId = await _chatService.createOrGetChat(userId);
+                try {
+                  // Create or get chat with this user
+                  final chatId = await _chatService.createOrGetChat(userId);
 
-                if (!context.mounted) return;
+                  // Fetch complete user data
+                  final userDoc = await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(userId)
+                      .get();
+                  final otherUser = UserModel.fromDocumentSnapshot(userDoc);
 
-                close(context, chatId);
+                  if (!context.mounted) return;
 
-                // Navigate to chat screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ChatScreen(
-                      chatId: chatId,
-                      otherUserName: userData['name'] ?? 'Unknown',
-                      isGroupChat: false,
+                  close(context, chatId);
+
+                  // Navigate to chat screen with complete user data
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatScreen(
+                        chatId: chatId,
+                        otherUser: otherUser,
+                        otherUserName: userData['name'] ?? 'Unknown',
+                        isGroupChat: false,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error opening chat: $e')),
+                  );
+                }
               },
             );
           },
@@ -827,4 +890,3 @@ class ChatSearchDelegate extends SearchDelegate<String> {
     );
   }
 }
-

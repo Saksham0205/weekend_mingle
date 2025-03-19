@@ -16,8 +16,38 @@ class ChatService {
         .where('participants', arrayContains: userId)
         .orderBy('lastMessageAt', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => Chat.fromFirestore(doc)).toList();
+        .asyncMap((snapshot) async {
+      List<Chat> chats = [];
+      for (var doc in snapshot.docs) {
+        Chat chat = Chat.fromFirestore(doc);
+        // Ensure all participant names are available
+        Map<String, String> updatedNames =
+        Map<String, String>.from(chat.participantNames);
+        Map<String, String?> updatedPhotos =
+        Map<String, String?>.from(chat.participantPhotos);
+
+        for (String participantId in chat.participants) {
+          if (!chat.participantNames.containsKey(participantId)) {
+            try {
+              final userDoc =
+              await _firestore.collection('users').doc(participantId).get();
+              if (userDoc.exists) {
+                final userData = UserModel.fromDocumentSnapshot(userDoc);
+                updatedNames[participantId] = userData.name;
+                updatedPhotos[participantId] = userData.photoUrl;
+              }
+            } catch (e) {
+              print('Error fetching user data: $e');
+            }
+          }
+        }
+
+        // Create updated chat with synchronized participant data
+        chat = chat.copyWith(
+            participantNames: updatedNames, participantPhotos: updatedPhotos);
+        chats.add(chat);
+      }
+      return chats;
     });
   }
 
@@ -39,6 +69,8 @@ class ChatService {
     required String chatId,
     required String content,
     String? imageUrl,
+    String? voiceUrl,
+    int? voiceDuration,
     required String type,
   }) async {
     final user = _auth.currentUser;
@@ -49,11 +81,13 @@ class ChatService {
     final userData = UserModel.fromDocumentSnapshot(userDoc);
 
     // Create message
-    final messageRef = _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc();
+    final messageRef =
+    _firestore.collection('chats').doc(chatId).collection('messages').doc();
+    final chatRef = _firestore.collection('chats').doc(chatId);
+    final chatDoc = await chatRef.get();
+    final chatData = chatDoc.data() as Map<String, dynamic>;
+    final List<String> participants =
+    List<String>.from(chatData['participants']);
 
     final message = Message(
       id: messageRef.id,
@@ -66,16 +100,13 @@ class ChatService {
       isRead: false,
       type: type,
       readBy: [user.uid],
+      voiceUrl: voiceUrl,
+      voiceDuration: voiceDuration,
+      deliveredTo: [user.uid],
     );
 
-    // Update chat with last message info
-    final chatRef = _firestore.collection('chats').doc(chatId);
-    final chatDoc = await chatRef.get();
-    final chatData = chatDoc.data() as Map<String, dynamic>;
-
-    // Get all participants except sender
-    final List<String> participants = List<String>.from(chatData['participants']);
-    final Map<String, int> unreadCounts = Map<String, int>.from(chatData['unreadCounts'] ?? {});
+    final Map<String, int> unreadCounts =
+    Map<String, int>.from(chatData['unreadCounts'] ?? {});
 
     // Update unread counts for all participants except sender
     for (final participant in participants) {
@@ -115,7 +146,8 @@ class ChatService {
 
     for (final doc in querySnapshot.docs) {
       final chat = Chat.fromFirestore(doc);
-      if (chat.participants.contains(otherUserId) && chat.participants.length == 2) {
+      if (chat.participants.contains(otherUserId) &&
+          chat.participants.length == 2) {
         return chat.id;
       }
     }
@@ -124,7 +156,8 @@ class ChatService {
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
     final currentUser = UserModel.fromDocumentSnapshot(userDoc);
 
-    final otherUserDoc = await _firestore.collection('users').doc(otherUserId).get();
+    final otherUserDoc =
+    await _firestore.collection('users').doc(otherUserId).get();
     final otherUser = UserModel.fromDocumentSnapshot(otherUserDoc);
 
     final chatRef = _firestore.collection('chats').doc();
@@ -174,7 +207,8 @@ class ChatService {
     final unreadCounts = <String, int>{};
 
     for (final memberId in memberIds) {
-      final memberDoc = await _firestore.collection('users').doc(memberId).get();
+      final memberDoc =
+      await _firestore.collection('users').doc(memberId).get();
       final memberData = UserModel.fromDocumentSnapshot(memberDoc);
 
       participantNames[memberId] = memberData.name;
@@ -214,6 +248,7 @@ class ChatService {
       isRead: false,
       type: 'system',
       readBy: [],
+      deliveredTo: memberIds,
     );
 
     await messageRef.set(message.toMap());
@@ -255,7 +290,8 @@ class ChatService {
       if (!participants.contains(memberId)) {
         participants.add(memberId);
 
-        final memberDoc = await _firestore.collection('users').doc(memberId).get();
+        final memberDoc =
+        await _firestore.collection('users').doc(memberId).get();
         final memberData = UserModel.fromDocumentSnapshot(memberDoc);
 
         participantNames[memberId] = memberData.name;
@@ -284,11 +320,13 @@ class ChatService {
       id: messageRef.id,
       senderId: 'system',
       senderName: 'System',
-      content: '${chat.participantNames[currentUser.uid]} added $newMembersNames to the group',
+      content:
+      '${chat.participantNames[currentUser.uid]} added $newMembersNames to the group',
       timestamp: DateTime.now(),
       isRead: false,
       type: 'system',
       readBy: [],
+      deliveredTo: memberIds,
     );
 
     await messageRef.set(message.toMap());
@@ -382,6 +420,20 @@ class ChatService {
     final participantPhotos = Map<String, String?>.from(chat.participantPhotos);
     final unreadCounts = Map<String, int>.from(chat.unreadCounts);
 
+    // Ensure participant names are properly set before removing the leaving user
+    for (String participantId in chat.participants) {
+      if (!participantNames.containsKey(participantId)) {
+        final participantDoc =
+        await _firestore.collection('users').doc(participantId).get();
+        if (participantDoc.exists) {
+          final participantData =
+          UserModel.fromDocumentSnapshot(participantDoc);
+          participantNames[participantId] = participantData.name;
+          participantPhotos[participantId] = participantData.photoUrl;
+        }
+      }
+    }
+
     participantNames.remove(user.uid);
     participantPhotos.remove(user.uid);
     unreadCounts.remove(user.uid);
@@ -406,6 +458,7 @@ class ChatService {
       isRead: false,
       type: 'system',
       readBy: [],
+      deliveredTo: participants,
     );
 
     await messageRef.set(message.toMap());
