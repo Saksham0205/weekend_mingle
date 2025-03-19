@@ -23,7 +23,24 @@ class CloudinaryService {
   static const String apiKey = '426339432116811';
 
   static Future<String?> uploadImage(File imageFile) async {
-    return uploadFile(imageFile, resourceType: 'image');
+    try {
+      final cloudinary = CloudinaryPublic(
+        cloudName,
+        uploadPreset,
+      );
+
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          imageFile.path,
+          resourceType: CloudinaryResourceType.Image,
+        ),
+      );
+
+      return response.secureUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
   }
 
   static Future<String?> uploadFile(File file, {String resourceType = 'auto'}) async {

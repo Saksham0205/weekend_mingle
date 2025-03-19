@@ -1840,7 +1840,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(notification.message),
                             const SizedBox(height: 4),
                             Text(
-                              timeago.format(notification.timestamp),
+                              _formatMessageTime(notification.timestamp as Timestamp?),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -2095,6 +2095,26 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  String _formatMessageTime(Timestamp? timestamp) {
+    if (timestamp == null) return '';
+
+    final now = DateTime.now();
+    final messageTime = timestamp.toDate();
+    final difference = now.difference(messageTime);
+
+    if (difference.inDays > 7) {
+      return '${messageTime.day}/${messageTime.month}/${messageTime.year}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 }
 
@@ -2568,7 +2588,9 @@ class MessagesTab extends StatelessWidget {
     );
   }
 
-  String _formatMessageTime(Timestamp timestamp) {
+  String _formatMessageTime(Timestamp? timestamp) {
+    if (timestamp == null) return '';
+
     final now = DateTime.now();
     final messageTime = timestamp.toDate();
     final difference = now.difference(messageTime);

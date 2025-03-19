@@ -72,7 +72,10 @@ class StoryService {
     String? mediaUrl;
     if (mediaFile != null) {
       try {
-        mediaUrl = await CloudinaryService.uploadImage(mediaFile.path as File);
+        mediaUrl = await CloudinaryService.uploadImage(mediaFile);
+        if (mediaUrl == null) {
+          throw Exception("Failed to upload media: No URL returned");
+        }
       } catch (e) {
         throw Exception("Failed to upload media: $e");
       }
