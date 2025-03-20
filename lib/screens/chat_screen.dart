@@ -41,7 +41,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
-  final _audioRecorder = Record();
+  final _audioRecorder = AudioRecorder();
   final _audioPlayer = AudioPlayer();
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
@@ -900,12 +900,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final tempDir = await getTemporaryDirectory();
       _recordedVoicePath = '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
 
-      await _audioRecorder.start(
-        path: _recordedVoicePath!,
-        encoder: AudioEncoder.aacLc,
-        bitRate: 128000,
-        samplingRate: 44100,
+      // Create a RecordConfig object to configure the recording settings
+      final recordConfig = RecordConfig(
+        encoder: AudioEncoder.aacLc, // Set the encoder
+        bitRate: 128000, // Set the bit rate
+        sampleRate: 44100, // Set the sample rate
       );
+
+      // Start recording with the RecordConfig
+      await _audioRecorder.start(recordConfig, path: _recordedVoicePath!);
 
       setState(() {
         _isRecording = true;
@@ -943,6 +946,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _showErrorSnackbar('Error stopping recording: $e');
     }
   }
+
   Widget _attachmentOption({
     required IconData icon,
     required String label,

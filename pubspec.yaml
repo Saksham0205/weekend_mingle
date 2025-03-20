@@ -36,7 +36,7 @@ dependencies:
   file_picker: ^9.1.0
   emoji_picker_flutter: ^4.3.0
   firebase_messaging: ^15.2.4
-  flutter_local_notifications: ^18.0.1
+  flutter_local_notifications: ^19.0.0
   geocoding: ^3.0.0
   timeago: ^3.7.0
 
@@ -54,8 +54,8 @@ dependencies:
   confetti: ^0.8.0
   shimmer: ^3.0.0
   google_fonts: ^6.1.0
-  record: ^4.4.4
-  audioplayers: ^5.2.1
+  record: ^5.2.1
+  audioplayers: ^6.4.0
   path_provider: ^2.1.1
   permission_handler: ^11.0.1
 
