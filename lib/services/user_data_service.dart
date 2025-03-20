@@ -11,7 +11,7 @@ class UserDataService {
   DateTime? _lastFetchTime;
   static const Duration _cacheDuration = Duration(minutes: 30);
 
-  Future<UserModel?> getCurrentUser() async {
+  Future<UserModel?> getCurrentUser({bool forceFetch = false}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       print('No authenticated user found');
@@ -20,8 +20,8 @@ class UserDataService {
 
     print('Getting user data for ${user.uid}');
 
-    // Return cached data if it's still valid
-    if (_cachedUser != null && _lastFetchTime != null) {
+    // Return cached data if it's still valid and forceFetch is false
+    if (!forceFetch && _cachedUser != null && _lastFetchTime != null) {
       final now = DateTime.now();
       if (now.difference(_lastFetchTime!) < _cacheDuration) {
         print('Returning cached user data');

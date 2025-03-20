@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:weekend_mingle/services/user_data_service.dart';
 import 'notification_service.dart';
 
 class AuthService {
@@ -13,17 +14,20 @@ class AuthService {
 
   // Sign in with email and password
   Future<UserCredential> signInWithEmailAndPassword(
-      String email,
-      String password,
-      ) async {
+    String email,
+    String password,
+  ) async {
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Update FCM token
-      await NotificationService.updateToken(userCredential.user!.uid);
+      // Update FCM token and fetch user data
+      await Future.wait([
+        NotificationService.updateToken(userCredential.user!.uid),
+        UserDataService().getCurrentUser(forceFetch: true),
+      ]);
 
       return userCredential;
     } catch (e) {
@@ -33,11 +37,11 @@ class AuthService {
 
   // Register with email and password
   Future<UserCredential> registerWithEmailAndPassword(
-      String email,
-      String password,
-      String name,
-      String profession,
-      ) async {
+    String email,
+    String password,
+    String name,
+    String profession,
+  ) async {
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -52,8 +56,11 @@ class AuthService {
         profession,
       );
 
-      // Update FCM token
-      await NotificationService.updateToken(userCredential.user!.uid);
+      // Update FCM token and fetch user data
+      await Future.wait([
+        NotificationService.updateToken(userCredential.user!.uid),
+        UserDataService().getCurrentUser(forceFetch: true),
+      ]);
 
       return userCredential;
     } catch (e) {
@@ -68,7 +75,7 @@ class AuthService {
       if (googleUser == null) throw 'Google sign in aborted';
 
       final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+          await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -85,8 +92,11 @@ class AuthService {
         '', // Profession will need to be updated later
       );
 
-      // Update FCM token
-      await NotificationService.updateToken(userCredential.user!.uid);
+      // Update FCM token and fetch user data
+      await Future.wait([
+        NotificationService.updateToken(userCredential.user!.uid),
+        UserDataService().getCurrentUser(forceFetch: true),
+      ]);
 
       return userCredential;
     } catch (e) {
@@ -96,11 +106,11 @@ class AuthService {
 
   // Create user profile in Firestore
   Future<void> _createUserProfile(
-      String uid,
-      String name,
-      String email,
-      String profession,
-      ) async {
+    String uid,
+    String name,
+    String email,
+    String profession,
+  ) async {
     await _firestore.collection('users').doc(uid).set({
       'name': name,
       'email': email,
@@ -108,9 +118,9 @@ class AuthService {
       'createdAt': FieldValue.serverTimestamp(),
       'interests': [],
       'bio': '',
-      'photoUrl': '',
       'location': null,
       'lastActive': FieldValue.serverTimestamp(),
+      'photoUrl': currentUser?.photoURL ?? ''
     }, SetOptions(merge: true));
   }
 

@@ -19,21 +19,23 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Try to get data from local storage first
-      final prefs = await SharedPreferences.getInstance();
-      final userDataString = prefs.getString(_userDataKey);
-
-      if (userDataString != null) {
-        final userData = json.decode(userDataString);
-        _user = UserModel.fromMap(userData, userData['uid']);
-      }
-
-      // Then fetch fresh data from Firebase
-      final freshUserData = await _userDataService.getCurrentUser();
+      // Always fetch fresh data from Firebase first
+      final freshUserData =
+          await _userDataService.getCurrentUser(forceFetch: true);
       if (freshUserData != null) {
         _user = freshUserData;
-        // Update local storage
+        // Update local storage with fresh data
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_userDataKey, json.encode(_user!.toMap()));
+      } else {
+        // If Firebase fetch fails, try to get data from local storage as fallback
+        final prefs = await SharedPreferences.getInstance();
+        final userDataString = prefs.getString(_userDataKey);
+
+        if (userDataString != null) {
+          final userData = json.decode(userDataString);
+          _user = UserModel.fromMap(userData, userData['uid']);
+        }
       }
     } catch (e) {
       print('Error initializing user: $e');
