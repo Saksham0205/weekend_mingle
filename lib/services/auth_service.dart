@@ -14,9 +14,9 @@ class AuthService {
 
   // Sign in with email and password
   Future<UserCredential> signInWithEmailAndPassword(
-    String email,
-    String password,
-  ) async {
+      String email,
+      String password,
+      ) async {
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -37,11 +37,11 @@ class AuthService {
 
   // Register with email and password
   Future<UserCredential> registerWithEmailAndPassword(
-    String email,
-    String password,
-    String name,
-    String profession,
-  ) async {
+      String email,
+      String password,
+      String name,
+      String profession,
+      ) async {
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -75,7 +75,7 @@ class AuthService {
       if (googleUser == null) throw 'Google sign in aborted';
 
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -106,11 +106,11 @@ class AuthService {
 
   // Create user profile in Firestore
   Future<void> _createUserProfile(
-    String uid,
-    String name,
-    String email,
-    String profession,
-  ) async {
+      String uid,
+      String name,
+      String email,
+      String profession,
+      ) async {
     await _firestore.collection('users').doc(uid).set({
       'name': name,
       'email': email,

@@ -21,7 +21,7 @@ class UserProvider with ChangeNotifier {
     try {
       // Always fetch fresh data from Firebase first
       final freshUserData =
-          await _userDataService.getCurrentUser(forceFetch: true);
+      await _userDataService.getCurrentUser(forceFetch: true);
       if (freshUserData != null) {
         _user = freshUserData;
         // Update local storage with fresh data

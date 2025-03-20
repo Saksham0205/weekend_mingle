@@ -76,25 +76,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     _playerStateSubscription =
         _audioPlayer.onPlayerStateChanged.listen((state) {
-<<<<<<< HEAD
-      if (mounted) {
-        setState(() {
-          if (state == PlayerState.completed) {
-            _isPlaying = false;
-            _currentPosition = Duration.zero;
-          } else if (state == PlayerState.playing) {
-            _isPlaying = true;
-            _isLoadingAudio = false;
-          } else if (state == PlayerState.paused) {
-            _isPlaying = false;
-          }
-        });
-      }
-    });
-
-    _positionSubscription = _audioPlayer.onPositionChanged.listen(
-      (position) {
-=======
           if (mounted) {
             setState(() {
               if (state == PlayerState.completed) {
@@ -112,7 +93,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     _positionSubscription = _audioPlayer.onPositionChanged.listen(
           (position) {
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
         if (mounted) {
           setState(() => _currentPosition = position);
         }
@@ -130,11 +110,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
 
     _audioPlayer.onDurationChanged.listen(
-<<<<<<< HEAD
-      (duration) {
-=======
           (duration) {
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
         if (mounted) {
           setState(() => _totalDuration = duration);
         }
@@ -161,7 +137,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             .doc(widget.chatId)
             .get();
         final participants =
-            List<String>.from(chatDoc.data()?['participants'] ?? []);
+        List<String>.from(chatDoc.data()?['participants'] ?? []);
         final currentUserId = _authService.currentUser?.uid;
         final otherUserId = participants.firstWhere((id) => id != currentUserId,
             orElse: () => '');
@@ -198,22 +174,22 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     _messagesSubscription =
         _chatService.getChatMessages(widget.chatId).listen((messages) {
-      if (mounted) {
-        setState(() {
-          _messages = messages;
-          _isLoading = false;
-        });
+          if (mounted) {
+            setState(() {
+              _messages = messages;
+              _isLoading = false;
+            });
 
-        // Mark messages as read when new messages arrive
-        _markMessagesAsRead();
-      }
-    }, onError: (error) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
+            // Mark messages as read when new messages arrive
+            _markMessagesAsRead();
+          }
+        }, onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
         });
-      }
-    });
   }
 
   @override
@@ -999,11 +975,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       final tempDir = await getTemporaryDirectory();
       _recordedVoicePath =
-<<<<<<< HEAD
-          '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
-=======
       '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
 
       // Create a RecordConfig object to configure the recording settings
       final recordConfig = RecordConfig(
@@ -1092,13 +1064,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildMessageBubble(
-    Map<String, dynamic> message,
-    bool isCurrentUser,
-    bool isFirstInGroup,
-    bool isLastInGroup,
-    String messageId,
-    DateTime? timestamp,
-  ) {
+      Map<String, dynamic> message,
+      bool isCurrentUser,
+      bool isFirstInGroup,
+      bool isLastInGroup,
+      String messageId,
+      DateTime? timestamp,
+      ) {
     final radius = isFirstInGroup ? 20.0 : 5.0;
     final bubbleMargin = isFirstInGroup
         ? const EdgeInsets.only(top: 10)
@@ -1118,7 +1090,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           padding: bubbleMargin,
           child: Row(
             mainAxisAlignment:
-                isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Show avatar only for other user's messages and if it's the last in group
@@ -1128,22 +1100,22 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   child: CircleAvatar(
                     radius: 12,
                     backgroundColor:
-                        Theme.of(context).primaryColor.withOpacity(0.1),
+                    Theme.of(context).primaryColor.withOpacity(0.1),
                     backgroundImage: widget.otherUser?.photoUrl != null &&
-                            widget.otherUser!.photoUrl!.isNotEmpty
+                        widget.otherUser!.photoUrl!.isNotEmpty
                         ? CachedNetworkImageProvider(
-                            widget.otherUser!.photoUrl!) as ImageProvider
+                        widget.otherUser!.photoUrl!) as ImageProvider
                         : null,
                     child: widget.otherUser?.photoUrl == null ||
-                            widget.otherUser!.photoUrl!.isEmpty
+                        widget.otherUser!.photoUrl!.isEmpty
                         ? Text(
-                            widget.otherUserName[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          )
+                      widget.otherUserName[0].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    )
                         : null,
                   ),
                 )
@@ -1204,11 +1176,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                       ),
                                       onPressed: () async {
                                         final voiceUrl =
-<<<<<<< HEAD
-                                            message['voiceUrl'] as String?;
-=======
                                         message['voiceUrl'] as String?;
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                         if (voiceUrl == null) return;
                                         if (_isLoadingAudio) return;
 
@@ -1217,11 +1185,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                           await _audioPlayer.pause();
                                         } else {
                                           setState(
-<<<<<<< HEAD
-                                              () => _isLoadingAudio = true);
-=======
                                                   () => _isLoadingAudio = true);
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
 
                                           if (_currentlyPlayingUrl !=
                                               voiceUrl) {
@@ -1230,11 +1194,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                               _positionSubscription?.cancel() ??
                                                   Future.value(),
                                               _playerStateSubscription
-<<<<<<< HEAD
-                                                      ?.cancel() ??
-=======
                                                   ?.cancel() ??
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                                   Future.value()
                                             ]);
 
@@ -1249,38 +1209,23 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                               _positionSubscription =
                                                   _audioPlayer.onPositionChanged
                                                       .listen((position) {
-<<<<<<< HEAD
-                                                if (mounted) {
-                                                  setState(() =>
-                                                      _currentPosition =
-                                                          position);
-                                                }
-                                              });
-=======
                                                     if (mounted) {
                                                       setState(() =>
                                                       _currentPosition =
                                                           position);
                                                     }
                                                   });
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                             } catch (e) {
                                               print('Error playing audio: $e');
                                               ScaffoldMessenger.of(context)
                                                   .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-<<<<<<< HEAD
                                                       'Error playing audio message: ${e.toString()}'),
                                                   backgroundColor:
-                                                      Colors.red.shade800,
-                                                  duration:
-                                                      Duration(seconds: 5),
-=======
-                                                      'Error playing audio message'),
-                                                  backgroundColor:
                                                   Colors.red.shade800,
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
+                                                  duration:
+                                                  Duration(seconds: 5),
                                                 ),
                                               );
                                             }
@@ -1288,11 +1233,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                             if (_isPlaying) {
                                               await _audioPlayer.pause();
                                               setState(
-<<<<<<< HEAD
-                                                  () => _isPlaying = false);
-=======
                                                       () => _isPlaying = false);
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                             } else {
                                               await _audioPlayer.resume();
                                               setState(() => _isPlaying = true);
@@ -1303,11 +1244,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
-<<<<<<< HEAD
-                                          CrossAxisAlignment.start,
-=======
                                       CrossAxisAlignment.start,
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                       children: [
                                         Text(
                                           'Voice Message',
@@ -1322,45 +1259,27 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                             message['voiceUrl'])
                                           LinearProgressIndicator(
                                             value: _currentPosition
-<<<<<<< HEAD
-                                                    .inMilliseconds /
-                                                (_totalDuration
-                                                        ?.inMilliseconds ??
-=======
                                                 .inMilliseconds /
                                                 (_totalDuration
                                                     ?.inMilliseconds ??
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                                     1),
                                             backgroundColor: isCurrentUser
                                                 ? Colors.white.withOpacity(0.3)
                                                 : Colors.grey[300],
                                             valueColor:
-<<<<<<< HEAD
-                                                AlwaysStoppedAnimation<Color>(
-                                              isCurrentUser
-                                                  ? Colors.white
-                                                  : Theme.of(context)
-                                                      .primaryColor,
-=======
                                             AlwaysStoppedAnimation<Color>(
                                               isCurrentUser
                                                   ? Colors.white
                                                   : Theme.of(context)
                                                   .primaryColor,
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                             ),
                                           ),
                                         Text(
                                           _currentlyPlayingUrl ==
-<<<<<<< HEAD
-                                                  message['voiceUrl']
-=======
                                               message['voiceUrl']
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                               ? '${_currentPosition.inMinutes}:${(_currentPosition.inSeconds % 60).toString().padLeft(2, '0')}'
                                               : '${message['voiceDuration'] ?? 0} sec',
-                                          style: TextStyle(
+                                           style: TextStyle(
                                             fontSize: 12,
                                             color: isCurrentUser
                                                 ? Colors.white.withOpacity(0.7)
@@ -1388,20 +1307,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         children: [
                           Icon(
                             message['deliveredTo']
-<<<<<<< HEAD
-                                        ?.contains(widget.otherUser?.uid) ??
-                                    false
-                                ? (message['readBy']
-                                            ?.contains(widget.otherUser?.uid) ??
-                                        false
-                                    ? Icons.done_all
-                                    : Icons.done)
-                                : Icons.access_time,
-                            size: 16,
-                            color: message['readBy']
-                                        ?.contains(widget.otherUser?.uid) ??
-                                    false
-=======
                                 ?.contains(widget.otherUser?.uid) ??
                                 false
                                 ? (message['readBy']
@@ -1414,7 +1319,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             color: message['readBy']
                                 ?.contains(widget.otherUser?.uid) ??
                                 false
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                 ? Colors.blue
                                 : Colors.grey[400],
                           ),
@@ -1462,24 +1366,24 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               child: CircleAvatar(
                 radius: 20,
                 backgroundColor:
-                    Theme.of(context).primaryColor.withOpacity(0.1),
+                Theme.of(context).primaryColor.withOpacity(0.1),
                 backgroundImage: _otherUser?.photoUrl != null &&
-                        _otherUser!.photoUrl!.isNotEmpty
+                    _otherUser!.photoUrl!.isNotEmpty
                     ? CachedNetworkImageProvider(_otherUser!.photoUrl!)
-                        as ImageProvider
+                as ImageProvider
                     : null,
                 child: _otherUser?.photoUrl == null ||
-                        (_otherUser?.photoUrl?.isEmpty ?? true)
+                    (_otherUser?.photoUrl?.isEmpty ?? true)
                     ? Text(
-                        widget.otherUserName.isNotEmpty
-                            ? widget.otherUserName[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      )
+                  widget.otherUserName.isNotEmpty
+                      ? widget.otherUserName[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                )
                     : null,
               ),
             ),
@@ -1509,10 +1413,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         if (!snapshot.hasData) return const SizedBox.shrink();
 
                         final data =
-                            snapshot.data?.data() as Map<String, dynamic>?;
+                        snapshot.data?.data() as Map<String, dynamic>?;
                         final isTyping =
                             data?['${widget.otherUser?.uid ?? "unknown"}_typing']
-                                    as bool? ??
+                            as bool? ??
                                 false;
 
                         return Text(
@@ -1561,13 +1465,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   _reportUser();
                   break;
                 case 'search':
-                  // TODO: Implement search in conversation
+                // TODO: Implement search in conversation
                   break;
                 case 'mute':
-                  // TODO: Implement notifications muting
+                // TODO: Implement notifications muting
                   break;
                 case 'wallpaper':
-                  // TODO: Implement chat wallpaper change
+                // TODO: Implement chat wallpaper change
                   break;
                 case 'delete_chat':
                   _deleteEntireChat();
@@ -1613,123 +1517,161 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         child: _isCheckingFriendship
             ? const Center(child: CircularProgressIndicator())
             : !_isFriend
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.lock_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Messaging not available',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'You can only message users who have\naccepted your friend request.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
+            ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.lock_outline,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Messaging not available',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You can only message users who have\naccepted your friend request.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+        )
+            : Column(
+          children: [
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _messages.isEmpty
+                  ? Center(
+                child: Column(
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 64,
+                      color: Colors.grey[400],
                     ),
-                  )
-                : Column(
-                    children: [
-                      Expanded(
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : _messages.isEmpty
-                                ? Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.chat_bubble_outline,
-                                          size: 64,
-                                          color: Colors.grey[400],
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'No messages yet',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Start the conversation with ${widget.otherUserName}!',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    controller: _scrollController,
-                                    reverse: true,
-                                    padding: const EdgeInsets.all(16),
-                                    itemCount: _messages.length,
-                                    itemBuilder: (context, index) {
-                                      final message = _messages[index];
-                                      final messageId = message.id;
-                                      final isCurrentUser =
-                                          message.senderId == currentUser.uid;
-                                      final timestamp = message.timestamp;
-
-                                      // Determine if this message is part of a group
-                                      bool isFirstInGroup = true;
-                                      bool isLastInGroup = true;
-
-                                      if (index > 0) {
-                                        final prevMessage =
-                                            _messages[index - 1];
-                                        isFirstInGroup = prevMessage.senderId !=
-                                            message.senderId;
-                                      }
-
-                                      if (index < _messages.length - 1) {
-                                        final nextMessage =
-                                            _messages[index + 1];
-                                        isLastInGroup = nextMessage.senderId !=
-                                            message.senderId;
-                                      }
-
-                                      return _buildMessageBubble(
-                                        {
-                                          'text': message.content,
-                                          'fileUrl': message.imageUrl ?? '',
-                                          'senderId': message.senderId,
-                                          'type': message.type,
-                                          'senderName': message.senderName
-                                        },
-                                        isCurrentUser,
-                                        isFirstInGroup,
-                                        isLastInGroup,
-                                        messageId,
-                                        timestamp,
-                                      );
-                                    },
-                                  ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No messages yet',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
                       ),
-<<<<<<< HEAD
-                      Container(
-                        margin: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-=======
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Start the conversation with ${widget.otherUserName}!',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+                  : ListView.builder(
+                controller: _scrollController,
+                reverse: true,
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  final messageId = message.id;
+                  final isCurrentUser =
+                      message.senderId == currentUser.uid;
+                  final timestamp = message.timestamp;
+
+                  // Determine if this message is part of a group
+                  bool isFirstInGroup = true;
+                  bool isLastInGroup = true;
+
+                  if (index > 0) {
+                    final prevMessage =
+                    _messages[index - 1];
+                    isFirstInGroup = prevMessage.senderId !=
+                        message.senderId;
+                  }
+
+                  if (index < _messages.length - 1) {
+                    final nextMessage =
+                    _messages[index + 1];
+                    isLastInGroup = nextMessage.senderId !=
+                        message.senderId;
+                  }
+
+                  return _buildMessageBubble(
+                    {
+                      'text': message.content,
+                      'fileUrl': message.imageUrl ?? '',
+                      'senderId': message.senderId,
+                      'type': message.type,
+                      'senderName': message.senderName
+                    },
+                    isCurrentUser,
+                    isFirstInGroup,
+                    isLastInGroup,
+                    messageId,
+                    timestamp,
+                  );
+                },
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _showEmoji = !_showEmoji;
+                      });
+                    },
+                    icon: Icon(
+                      _showEmoji
+                          ? Icons.keyboard
+                          : Icons.emoji_emotions_outlined,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                        ),
+                      ),
                       textCapitalization:
                       TextCapitalization.sentences,
                       keyboardType: TextInputType.multiline,
@@ -1774,108 +1716,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 1,
-                              blurRadius: 3,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
                         ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showEmoji = !_showEmoji;
-                                });
-                              },
-                              icon: Icon(
-                                _showEmoji
-                                    ? Icons.keyboard
-                                    : Icons.emoji_emotions_outlined,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            Expanded(
-                              child: TextField(
-                                controller: _messageController,
-                                decoration: InputDecoration(
-                                  hintText: 'Type a message...',
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                keyboardType: TextInputType.multiline,
-                                maxLines: null,
-                                onSubmitted: (text) {
-                                  if (text.isNotEmpty) {
-                                    _sendMessage(text: text);
-                                  }
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: _showAttachmentOptions,
-                              icon: Icon(
-                                Icons.attach_file,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                onPressed: _messageController.text.isEmpty
-                                    ? () {
-                                        if (_isRecording) {
-                                          _stopRecording();
-                                        } else {
-                                          _startRecording();
-                                        }
-                                      }
-                                    : _isSendingMessage
-                                        ? null
-                                        : () => _sendMessage(
-                                            text: _messageController.text),
-                                icon: _isSendingMessage
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Icon(
-                                        _messageController.text.isEmpty
-                                            ? _isRecording
-                                                ? Icons.stop
-                                                : Icons.mic
-                                            : Icons.send,
-                                        color: Colors.white,
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-<<<<<<< HEAD
-=======
                       )
                           : Icon(
                         _messageController.text.isEmpty
@@ -1884,23 +1726,27 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             : Icons.mic
                             : Icons.send,
                         color: Colors.white,
->>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                       ),
-                      if (_showEmoji)
-                        SizedBox(
-                          height: 250,
-                          child: EmojiPicker(
-                            onEmojiSelected: (category, emoji) {
-                              _messageController.text =
-                                  _messageController.text + emoji.emoji;
-                              _messageController.selection =
-                                  TextSelection.fromPosition(TextPosition(
-                                      offset: _messageController.text.length));
-                            },
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
+                ],
+              ),
+            ),
+            if (_showEmoji)
+              SizedBox(
+                height: 250,
+                child: EmojiPicker(
+                  onEmojiSelected: (category, emoji) {
+                    _messageController.text =
+                        _messageController.text + emoji.emoji;
+                    _messageController.selection =
+                        TextSelection.fromPosition(TextPosition(
+                            offset: _messageController.text.length));
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
