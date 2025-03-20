@@ -76,6 +76,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     _playerStateSubscription =
         _audioPlayer.onPlayerStateChanged.listen((state) {
+<<<<<<< HEAD
       if (mounted) {
         setState(() {
           if (state == PlayerState.completed) {
@@ -93,6 +94,25 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     _positionSubscription = _audioPlayer.onPositionChanged.listen(
       (position) {
+=======
+          if (mounted) {
+            setState(() {
+              if (state == PlayerState.completed) {
+                _isPlaying = false;
+                _currentPosition = Duration.zero;
+              } else if (state == PlayerState.playing) {
+                _isPlaying = true;
+                _isLoadingAudio = false;
+              } else if (state == PlayerState.paused) {
+                _isPlaying = false;
+              }
+            });
+          }
+        });
+
+    _positionSubscription = _audioPlayer.onPositionChanged.listen(
+          (position) {
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
         if (mounted) {
           setState(() => _currentPosition = position);
         }
@@ -110,7 +130,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
 
     _audioPlayer.onDurationChanged.listen(
+<<<<<<< HEAD
       (duration) {
+=======
+          (duration) {
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
         if (mounted) {
           setState(() => _totalDuration = duration);
         }
@@ -975,7 +999,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       final tempDir = await getTemporaryDirectory();
       _recordedVoicePath =
+<<<<<<< HEAD
           '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
+=======
+      '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
 
       // Create a RecordConfig object to configure the recording settings
       final recordConfig = RecordConfig(
@@ -1176,7 +1204,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                       ),
                                       onPressed: () async {
                                         final voiceUrl =
+<<<<<<< HEAD
                                             message['voiceUrl'] as String?;
+=======
+                                        message['voiceUrl'] as String?;
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                         if (voiceUrl == null) return;
                                         if (_isLoadingAudio) return;
 
@@ -1185,7 +1217,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                           await _audioPlayer.pause();
                                         } else {
                                           setState(
+<<<<<<< HEAD
                                               () => _isLoadingAudio = true);
+=======
+                                                  () => _isLoadingAudio = true);
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
 
                                           if (_currentlyPlayingUrl !=
                                               voiceUrl) {
@@ -1194,7 +1230,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                               _positionSubscription?.cancel() ??
                                                   Future.value(),
                                               _playerStateSubscription
+<<<<<<< HEAD
                                                       ?.cancel() ??
+=======
+                                                  ?.cancel() ??
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                                   Future.value()
                                             ]);
 
@@ -1209,23 +1249,38 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                               _positionSubscription =
                                                   _audioPlayer.onPositionChanged
                                                       .listen((position) {
+<<<<<<< HEAD
                                                 if (mounted) {
                                                   setState(() =>
                                                       _currentPosition =
                                                           position);
                                                 }
                                               });
+=======
+                                                    if (mounted) {
+                                                      setState(() =>
+                                                      _currentPosition =
+                                                          position);
+                                                    }
+                                                  });
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                             } catch (e) {
                                               print('Error playing audio: $e');
                                               ScaffoldMessenger.of(context)
                                                   .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
+<<<<<<< HEAD
                                                       'Error playing audio message: ${e.toString()}'),
                                                   backgroundColor:
                                                       Colors.red.shade800,
                                                   duration:
                                                       Duration(seconds: 5),
+=======
+                                                      'Error playing audio message'),
+                                                  backgroundColor:
+                                                  Colors.red.shade800,
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                                 ),
                                               );
                                             }
@@ -1233,7 +1288,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                             if (_isPlaying) {
                                               await _audioPlayer.pause();
                                               setState(
+<<<<<<< HEAD
                                                   () => _isPlaying = false);
+=======
+                                                      () => _isPlaying = false);
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                             } else {
                                               await _audioPlayer.resume();
                                               setState(() => _isPlaying = true);
@@ -1244,7 +1303,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
+<<<<<<< HEAD
                                           CrossAxisAlignment.start,
+=======
+                                      CrossAxisAlignment.start,
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                       children: [
                                         Text(
                                           'Voice Message',
@@ -1259,24 +1322,42 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                             message['voiceUrl'])
                                           LinearProgressIndicator(
                                             value: _currentPosition
+<<<<<<< HEAD
                                                     .inMilliseconds /
                                                 (_totalDuration
                                                         ?.inMilliseconds ??
+=======
+                                                .inMilliseconds /
+                                                (_totalDuration
+                                                    ?.inMilliseconds ??
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                                     1),
                                             backgroundColor: isCurrentUser
                                                 ? Colors.white.withOpacity(0.3)
                                                 : Colors.grey[300],
                                             valueColor:
+<<<<<<< HEAD
                                                 AlwaysStoppedAnimation<Color>(
                                               isCurrentUser
                                                   ? Colors.white
                                                   : Theme.of(context)
                                                       .primaryColor,
+=======
+                                            AlwaysStoppedAnimation<Color>(
+                                              isCurrentUser
+                                                  ? Colors.white
+                                                  : Theme.of(context)
+                                                  .primaryColor,
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                             ),
                                           ),
                                         Text(
                                           _currentlyPlayingUrl ==
+<<<<<<< HEAD
                                                   message['voiceUrl']
+=======
+                                              message['voiceUrl']
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                               ? '${_currentPosition.inMinutes}:${(_currentPosition.inSeconds % 60).toString().padLeft(2, '0')}'
                                               : '${message['voiceDuration'] ?? 0} sec',
                                           style: TextStyle(
@@ -1307,6 +1388,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         children: [
                           Icon(
                             message['deliveredTo']
+<<<<<<< HEAD
                                         ?.contains(widget.otherUser?.uid) ??
                                     false
                                 ? (message['readBy']
@@ -1319,6 +1401,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             color: message['readBy']
                                         ?.contains(widget.otherUser?.uid) ??
                                     false
+=======
+                                ?.contains(widget.otherUser?.uid) ??
+                                false
+                                ? (message['readBy']
+                                ?.contains(widget.otherUser?.uid) ??
+                                false
+                                ? Icons.done_all
+                                : Icons.done)
+                                : Icons.access_time,
+                            size: 16,
+                            color: message['readBy']
+                                ?.contains(widget.otherUser?.uid) ??
+                                false
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                                 ? Colors.blue
                                 : Colors.grey[400],
                           ),
@@ -1629,9 +1725,56 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                     },
                                   ),
                       ),
+<<<<<<< HEAD
                       Container(
                         margin: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
+=======
+                      textCapitalization:
+                      TextCapitalization.sentences,
+                      keyboardType: TextInputType.multiline,
+                      maxLines: null,
+                      onSubmitted: (text) {
+                        if (text.isNotEmpty) {
+                          _sendMessage(text: text);
+                        }
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _showAttachmentOptions,
+                    icon: Icon(
+                      Icons.attach_file,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: _messageController.text.isEmpty
+                          ? () {
+                        if (_isRecording) {
+                          _stopRecording();
+                        } else {
+                          _startRecording();
+                        }
+                      }
+                          : _isSendingMessage
+                          ? null
+                          : () => _sendMessage(
+                          text: _messageController.text),
+                      icon: _isSendingMessage
+                          ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
@@ -1731,6 +1874,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
+<<<<<<< HEAD
+=======
+                      )
+                          : Icon(
+                        _messageController.text.isEmpty
+                            ? _isRecording
+                            ? Icons.stop
+                            : Icons.mic
+                            : Icons.send,
+                        color: Colors.white,
+>>>>>>> 0eb8659c2345fbb072f04ae41771f85d77100fa6
                       ),
                       if (_showEmoji)
                         SizedBox(
