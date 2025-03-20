@@ -44,6 +44,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final _audioRecorder = AudioRecorder();
   final _audioPlayer = AudioPlayer();
   final _messageController = TextEditingController();
+  bool _isPlaying = false;
+  String? _currentlyPlayingUrl;
+  Duration? _totalDuration;
+  Duration _currentPosition = Duration.zero;
+  StreamSubscription? _positionSubscription;
+  StreamSubscription? _playerStateSubscription;
+  bool _isLoadingAudio = false;
   final _scrollController = ScrollController();
   final _authService = AuthService();
   final _userService = UserService();
@@ -65,6 +72,60 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _otherUser = widget.otherUser;
     _initializeChat();
     _messageController.addListener(_onTypingChanged);
+    _audioPlayer.setReleaseMode(ReleaseMode.stop);
+
+    _playerStateSubscription =
+        _audioPlayer.onPlayerStateChanged.listen((state) {
+          if (mounted) {
+            setState(() {
+              if (state == PlayerState.completed) {
+                _isPlaying = false;
+                _currentPosition = Duration.zero;
+              } else if (state == PlayerState.playing) {
+                _isPlaying = true;
+                _isLoadingAudio = false;
+              } else if (state == PlayerState.paused) {
+                _isPlaying = false;
+              }
+            });
+          }
+        });
+
+    _positionSubscription = _audioPlayer.onPositionChanged.listen(
+          (position) {
+        if (mounted) {
+          setState(() => _currentPosition = position);
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error updating audio position'),
+              backgroundColor: Colors.red.shade800,
+            ),
+          );
+        }
+      },
+    );
+
+    _audioPlayer.onDurationChanged.listen(
+          (duration) {
+        if (mounted) {
+          setState(() => _totalDuration = duration);
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error getting audio duration'),
+              backgroundColor: Colors.red.shade800,
+            ),
+          );
+        }
+      },
+    );
   }
 
   Future<void> _initializeChat() async {
@@ -138,6 +199,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _scrollController.dispose();
     _typingTimer?.cancel();
     _messagesSubscription?.cancel();
+
+    // Cleanup audio resources
+    _positionSubscription?.cancel();
+    _playerStateSubscription?.cancel();
+    _audioPlayer.stop().then((_) {
+      _currentlyPlayingUrl = null;
+      _currentPosition = Duration.zero;
+      _totalDuration = null;
+      _isPlaying = false;
+      _isLoadingAudio = false;
+      _audioPlayer.dispose();
+    }).catchError((error) {
+      print('Error disposing audio player: $error');
+    });
     super.dispose();
   }
 
@@ -289,7 +364,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     String? voiceUrl,
     int? voiceDuration,
   }) async {
-    if ((text == null || text.isEmpty) && fileUrl == null && voiceUrl == null) return;
+    if ((text == null || text.isEmpty) && fileUrl == null && voiceUrl == null)
+      return;
 
     final currentUser = _authService.currentUser;
     if (currentUser == null) return;
@@ -819,28 +895,28 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-              onPressed: _isRecording ? _stopRecording : _startRecording,
-              color: _isRecording ? Colors.red : null,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+                  onPressed: _isRecording ? _stopRecording : _startRecording,
+                  color: _isRecording ? Colors.red : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.photo_camera),
+                  onPressed: _pickImage,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.emoji_emotions_outlined),
+                  onPressed: () {
+                    setState(() {
+                      _showEmoji = !_showEmoji;
+                    });
+                  },
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.photo_camera),
-              onPressed: _pickImage,
-            ),
-            IconButton(
-              icon: const Icon(Icons.emoji_emotions_outlined),
-              onPressed: () {
-                setState(() {
-                  _showEmoji = !_showEmoji;
-                });
-              },
-            ),
-          ],
-        ),
             ListTile(
               leading: const Icon(Icons.reply),
               title: const Text('Reply'),
@@ -898,7 +974,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       }
 
       final tempDir = await getTemporaryDirectory();
-      _recordedVoicePath = '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
+      _recordedVoicePath =
+      '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.aac';
 
       // Create a RecordConfig object to configure the recording settings
       final recordConfig = RecordConfig(
@@ -1084,29 +1161,134 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                       : Colors.black87,
                                 ),
                               ),
-                             if (type == 'voice') ...[  // Voice message UI
+                            if (type == 'voice') ...[
+                              // Voice message UI
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: Icon(
-                                      Icons.play_arrow,
-                                      color: isCurrentUser ? Colors.white : Colors.black87,
-                                    ),
-                                    onPressed: () {
-                                      // Implement voice playback
-                                    },
-                                  ),
-                                  Text(
-                                    '${message['voiceDuration']} sec',
-                                    style: TextStyle(
-                                      color: isCurrentUser ? Colors.white : Colors.black87,
+                                      icon: Icon(
+                                        Icons.play_arrow,
+                                        color: isCurrentUser
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      ),
+                                      onPressed: () async {
+                                        final voiceUrl =
+                                        message['voiceUrl'] as String?;
+                                        if (voiceUrl == null) return;
+                                        if (_isLoadingAudio) return;
+
+                                        if (_isPlaying &&
+                                            _currentlyPlayingUrl == voiceUrl) {
+                                          await _audioPlayer.pause();
+                                        } else {
+                                          setState(
+                                                  () => _isLoadingAudio = true);
+
+                                          if (_currentlyPlayingUrl !=
+                                              voiceUrl) {
+                                            await _audioPlayer.stop();
+                                            await Future.wait([
+                                              _positionSubscription?.cancel() ??
+                                                  Future.value(),
+                                              _playerStateSubscription
+                                                  ?.cancel() ??
+                                                  Future.value()
+                                            ]);
+
+                                            try {
+                                              // Initialize new audio source
+                                              await _audioPlayer
+                                                  .setSourceUrl(voiceUrl);
+                                              _currentlyPlayingUrl = voiceUrl;
+                                              _currentPosition = Duration.zero;
+                                              await _audioPlayer.resume();
+
+                                              _positionSubscription =
+                                                  _audioPlayer.onPositionChanged
+                                                      .listen((position) {
+                                                    if (mounted) {
+                                                      setState(() =>
+                                                      _currentPosition =
+                                                          position);
+                                                    }
+                                                  });
+                                            } catch (e) {
+                                              print('Error playing audio: $e');
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Error playing audio message'),
+                                                  backgroundColor:
+                                                  Colors.red.shade800,
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            if (_isPlaying) {
+                                              await _audioPlayer.pause();
+                                              setState(
+                                                      () => _isPlaying = false);
+                                            } else {
+                                              await _audioPlayer.resume();
+                                              setState(() => _isPlaying = true);
+                                            }
+                                          }
+                                        }
+                                      }),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Voice Message',
+                                          style: TextStyle(
+                                            color: isCurrentUser
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        if (_currentlyPlayingUrl ==
+                                            message['voiceUrl'])
+                                          LinearProgressIndicator(
+                                            value: _currentPosition
+                                                .inMilliseconds /
+                                                (_totalDuration
+                                                    ?.inMilliseconds ??
+                                                    1),
+                                            backgroundColor: isCurrentUser
+                                                ? Colors.white.withOpacity(0.3)
+                                                : Colors.grey[300],
+                                            valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              isCurrentUser
+                                                  ? Colors.white
+                                                  : Theme.of(context)
+                                                  .primaryColor,
+                                            ),
+                                          ),
+                                        Text(
+                                          _currentlyPlayingUrl ==
+                                              message['voiceUrl']
+                                              ? '${_currentPosition.inMinutes}:${(_currentPosition.inSeconds % 60).toString().padLeft(2, '0')}'
+                                              : '${message['voiceDuration'] ?? 0} sec',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isCurrentUser
+                                                ? Colors.white.withOpacity(0.7)
+                                                : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ]
-                            else if (message['fileUrl'] != null) ...[
+                            ] else if (message['fileUrl'] != null) ...[
                               // Rest of your file handling code
                             ],
                             // Reactions display code
@@ -1114,19 +1296,26 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
-                    if (isCurrentUser && isLastInGroup) ...[  // Message status indicators
+                    if (isCurrentUser && isLastInGroup) ...[
+                      // Message status indicators
                       const SizedBox(height: 4),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            message['deliveredTo']?.contains(widget.otherUser?.uid) ?? false
-                                ? (message['readBy']?.contains(widget.otherUser?.uid) ?? false
+                            message['deliveredTo']
+                                ?.contains(widget.otherUser?.uid) ??
+                                false
+                                ? (message['readBy']
+                                ?.contains(widget.otherUser?.uid) ??
+                                false
                                 ? Icons.done_all
                                 : Icons.done)
                                 : Icons.access_time,
                             size: 16,
-                            color: message['readBy']?.contains(widget.otherUser?.uid) ?? false
+                            color: message['readBy']
+                                ?.contains(widget.otherUser?.uid) ??
+                                false
                                 ? Colors.blue
                                 : Colors.grey[400],
                           ),
@@ -1508,7 +1697,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     child: IconButton(
                       onPressed: _messageController.text.isEmpty
                           ? () {
-                        // Implement voice message recording
+                        if (_isRecording) {
+                          _stopRecording();
+                        } else {
+                          _startRecording();
+                        }
                       }
                           : _isSendingMessage
                           ? null
@@ -1525,7 +1718,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       )
                           : Icon(
                         _messageController.text.isEmpty
-                            ? Icons.mic
+                            ? _isRecording
+                            ? Icons.stop
+                            : Icons.mic
                             : Icons.send,
                         color: Colors.white,
                       ),
