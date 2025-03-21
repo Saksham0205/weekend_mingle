@@ -158,9 +158,12 @@ class _CreateWeekendActivityScreenState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Weekend Activity'),
+        elevation: 0,
+        backgroundColor: theme.primaryColor,
       ),
       body: Form(
         key: _formKey,
@@ -169,109 +172,235 @@ class _CreateWeekendActivityScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Please enter a title' : null,
-                onSaved: (value) => _title = value ?? '',
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                validator: (value) => value?.isEmpty ?? true
-                    ? 'Please enter a description'
-                    : null,
-                onSaved: (value) => _description = value ?? '',
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Event Type',
-                  border: OutlineInputBorder(),
-                ),
-                value: _eventType,
-                items: _eventTypes
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Row(
-                            children: [
-                              Icon(_getEventTypeIcon(type)),
-                              const SizedBox(width: 8),
-                              Text(type),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _eventType = value ?? 'Other';
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Is this a paid event?'),
-                value: _isPaid,
-                onChanged: (value) {
-                  setState(() {
-                    _isPaid = value;
-                  });
-                },
-              ),
-              if (_isPaid)
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Price',
-                    border: OutlineInputBorder(),
-                    prefixText: '${""}',
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Basic Information',
+                          style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Title',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.title),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        validator: (value) => value?.isEmpty ?? true
+                            ? 'Please enter a title'
+                            : null,
+                        onSaved: (value) => _title = value ?? '',
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Description',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.description),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        maxLines: 3,
+                        validator: (value) => value?.isEmpty ?? true
+                            ? 'Please enter a description'
+                            : null,
+                        onSaved: (value) => _description = value ?? '',
+                      ),
+                    ],
                   ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (_isPaid) {
-                      if (value?.isEmpty ?? true) return 'Please enter a price';
-                      if (double.tryParse(value!) == null)
-                        return 'Please enter a valid price';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _price =
-                      value?.isNotEmpty == true ? double.parse(value!) : null,
                 ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Please enter a location' : null,
-                onSaved: (value) => _location = value ?? '',
               ),
               const SizedBox(height: 16),
-              ListTile(
-                title:
-                    Text('Date: ${DateFormat('MMM dd, yyyy').format(_date)}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context),
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Event Details', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Event Type',
+                          border: const OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          prefixIcon: Icon(_getEventTypeIcon(_eventType)),
+                        ),
+                        value: _eventType,
+                        items: _eventTypes
+                            .map((type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Row(
+                                    children: [
+                                      Icon(_getEventTypeIcon(type)),
+                                      const SizedBox(width: 8),
+                                      Text(type,
+                                          style: const TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _eventType = value ?? 'Other';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              ListTile(
-                title: Text(
-                    'Start Time: ${DateFormat('hh:mm a').format(_startTime)}'),
-                trailing: const Icon(Icons.access_time),
-                onTap: () => _selectTime(context, true),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Event Settings', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        title: const Text('Paid Event'),
+                        subtitle:
+                            const Text('Enable if this is a paid activity'),
+                        value: _isPaid,
+                        secondary: Icon(
+                            _isPaid ? Icons.payment : Icons.money_off,
+                            color: _isPaid ? theme.primaryColor : Colors.grey),
+                        onChanged: (value) {
+                          setState(() {
+                            _isPaid = value;
+                          });
+                        },
+                      ),
+                      if (_isPaid)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: TextFormField(
+                            decoration: InputDecoration(
+                              labelText: 'Price',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.attach_money),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              helperText: 'Enter the price for this activity',
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (_isPaid) {
+                                if (value?.isEmpty ?? true)
+                                  return 'Please enter a price';
+                                if (double.tryParse(value!) == null)
+                                  return 'Please enter a valid price';
+                              }
+                              return null;
+                            },
+                            onSaved: (value) => _price =
+                                value?.isNotEmpty == true
+                                    ? double.parse(value!)
+                                    : null,
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Location',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.location_on),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          helperText: 'Enter the location for this activity',
+                        ),
+                        validator: (value) => value?.isEmpty ?? true
+                            ? 'Please enter a location'
+                            : null,
+                        onSaved: (value) => _location = value ?? '',
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              ListTile(
-                title:
-                    Text('End Time: ${DateFormat('hh:mm a').format(_endTime)}'),
-                trailing: const Icon(Icons.access_time),
-                onTap: () => _selectTime(context, false),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Date & Time', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: () => _selectDate(context),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: 'Date',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.calendar_today),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                          ),
+                          child: Text(
+                            DateFormat('EEEE, MMM dd, yyyy').format(_date),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectTime(context, true),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Start Time',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.access_time),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                ),
+                                child: Text(
+                                  DateFormat('hh:mm a').format(_startTime),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectTime(context, false),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'End Time',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.access_time),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                ),
+                                child: Text(
+                                  DateFormat('hh:mm a').format(_endTime),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -298,50 +427,83 @@ class _CreateWeekendActivityScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Private Event'),
-                subtitle: const Text(
-                    'Only invited users can see and join this activity'),
-                value: _isPrivate,
-                onChanged: (value) {
-                  setState(() {
-                    _isPrivate = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text('Tags (optional)'),
-              Wrap(
-                spacing: 8,
-                children: _tags
-                    .map((tag) => Chip(
-                          label: Text(tag),
-                          onDeleted: () => _removeTag(tag),
-                        ))
-                    .toList(),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      decoration: const InputDecoration(
-                        hintText: 'Add a tag',
-                        border: OutlineInputBorder(),
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Additional Settings',
+                          style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        title: const Text('Private Event'),
+                        subtitle: const Text(
+                            'Only invited users can see and join this activity'),
+                        secondary: Icon(
+                            _isPrivate ? Icons.lock : Icons.lock_open,
+                            color:
+                                _isPrivate ? theme.primaryColor : Colors.grey),
+                        value: _isPrivate,
+                        onChanged: (value) {
+                          setState(() {
+                            _isPrivate = value;
+                          });
+                        },
                       ),
-                      onFieldSubmitted: _addTag,
-                    ),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      Text('Tags (optional)',
+                          style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _tags
+                            .map((tag) => Chip(
+                                  label: Text(tag),
+                                  deleteIcon: const Icon(Icons.close, size: 18),
+                                  onDeleted: () => _removeTag(tag),
+                                  backgroundColor:
+                                      theme.primaryColor.withOpacity(0.1),
+                                  labelStyle:
+                                      TextStyle(color: theme.primaryColor),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          hintText: 'Add a tag and press Enter',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.local_offer),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        onFieldSubmitted: _addTag,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
+              Container(
                 width: double.infinity,
+                margin: const EdgeInsets.symmetric(vertical: 16.0),
                 child: ElevatedButton(
                   onPressed: _createActivity,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16.0),
-                    child: Text('Create Activity'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: const Text(
+                    'Create Activity',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

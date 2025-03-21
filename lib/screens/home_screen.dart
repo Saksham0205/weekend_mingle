@@ -1659,7 +1659,40 @@ class _HomeScreenState extends State<HomeScreen> {
     final descriptionController = TextEditingController();
     final dateController = TextEditingController();
     final locationController = TextEditingController();
+    final tagController = TextEditingController();
     DateTime? selectedDate;
+    String _eventType = 'Other';
+    bool _isPrivate = false;
+    int _capacity = 10;
+    List<String> _tags = [];
+    final List<String> _eventTypes = [
+      'Hiking',
+      'Dinner',
+      'Movie',
+      'Sports',
+      'Gaming',
+      'Music',
+      'Other'
+    ];
+
+    IconData _getEventTypeIcon(String eventType) {
+      switch (eventType.toLowerCase()) {
+        case 'hiking':
+          return Icons.landscape;
+        case 'dinner':
+          return Icons.restaurant;
+        case 'movie':
+          return Icons.movie;
+        case 'sports':
+          return Icons.sports;
+        case 'gaming':
+          return Icons.games;
+        case 'music':
+          return Icons.music_note;
+        default:
+          return Icons.event;
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1674,7 +1707,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
               key: formKey,
@@ -1692,9 +1725,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: titleController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Title',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.title),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -1706,9 +1742,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: descriptionController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Description',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.description),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                     maxLines: 3,
                     validator: (value) {
@@ -1719,12 +1758,44 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _eventType,
+                    decoration: InputDecoration(
+                      labelText: 'Activity Type',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: Icon(_getEventTypeIcon(_eventType)),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                    items: _eventTypes.map((String type) {
+                      return DropdownMenuItem<String>(
+                        value: type,
+                        child: Row(
+                          children: [
+                            Icon(_getEventTypeIcon(type)),
+                            const SizedBox(width: 8),
+                            Text(type),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _eventType = newValue;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: dateController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.calendar_today),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                     readOnly: true,
                     onTap: () async {
@@ -1738,7 +1809,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() {
                           selectedDate = picked;
                           dateController.text =
-                              '${picked.day}/${picked.month}/${picked.year}';
+                              DateFormat('EEEE, MMM d, yyyy').format(picked);
                         });
                       }
                     },
@@ -1752,10 +1823,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: locationController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Location',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.location_on),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.location_on),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -1764,8 +1837,93 @@ class _HomeScreenState extends State<HomeScreen> {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: tagController,
+                          decoration: InputDecoration(
+                            labelText: 'Add Tags',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.tag),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          if (tagController.text.isNotEmpty) {
+                            setState(() {
+                              _tags.add(tagController.text);
+                              tagController.clear();
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  if (_tags.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      children: _tags
+                          .map((tag) => Chip(
+                                label: Text(tag),
+                                onDeleted: () {
+                                  setState(() {
+                                    _tags.remove(tag);
+                                  });
+                                },
+                              ))
+                          .toList(),
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Maximum Attendees: $_capacity',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          setState(() {
+                            if (_capacity > 2) _capacity--;
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          setState(() {
+                            if (_capacity < 50) _capacity++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  SwitchListTile(
+                    title: const Text('Private Event'),
+                    subtitle: const Text('Only invited people can join'),
+                    value: _isPrivate,
+                    onChanged: (bool value) {
+                      setState(() {
+                        _isPrivate = value;
+                      });
+                    },
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                     onPressed: () async {
                       if (formKey.currentState!.validate() &&
                           selectedDate != null) {
@@ -1780,12 +1938,25 @@ class _HomeScreenState extends State<HomeScreen> {
                               .add({
                             'title': titleController.text,
                             'description': descriptionController.text,
+                            'eventType': _eventType,
                             'date': Timestamp.fromDate(selectedDate!),
+                            'startTime': Timestamp.fromDate(selectedDate!),
+                            'endTime': Timestamp.fromDate(
+                                selectedDate!.add(Duration(hours: 2))),
                             'location': locationController.text,
-                            'createdBy': currentUser.uid,
+                            'creatorId': currentUser.uid,
+                            'creatorName': currentUser.name ?? 'Anonymous',
+                            'creatorPhotoUrl': currentUser.photoUrl,
                             'createdAt': Timestamp.now(),
-                            'participants': [currentUser.uid],
-                            'maxParticipants': 10,
+                            'attendees': [currentUser.uid],
+                            'interestedUsers': [],
+                            'capacity': _capacity,
+                            'currentAttendees': 1,
+                            'isPaid': false,
+                            'additionalInfo': {
+                              'isPrivate': _isPrivate,
+                              'tags': _tags
+                            },
                           });
 
                           if (mounted) {
@@ -1811,9 +1982,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
                     child: const Text('Create Plan'),
                   ),
                 ],
