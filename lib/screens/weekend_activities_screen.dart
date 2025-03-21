@@ -160,18 +160,68 @@ class WeekendActivityHistoryScreen extends StatelessWidget {
                     final activity = activities[index];
                     return Card(
                       margin: const EdgeInsets.all(8.0),
-                      child: ListTile(
-                        title: Text(activity.title),
-                        subtitle: Text(
-                          'Date: ${DateFormat('MMM dd, yyyy').format(activity.date)}\n'
-                          'Attendees: ${activity.currentAttendees}/${activity.capacity}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () {
-                            // TODO: Implement edit functionality
-                          },
-                        ),
+                      child: Column(
+                        children: [
+                          WeekendActivityCard(
+                            activity: activity,
+                            currentUserId: currentUser.uid,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      WeekendActivityDetailScreen(
+                                          activity: activity),
+                                ),
+                              );
+                            },
+                          ),
+                          if (activity.creatorId == currentUser.uid)
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () {
+                                      // TODO: Implement edit functionality
+                                      // Navigate to edit screen
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Delete Activity'),
+                                          content: const Text(
+                                              'Are you sure you want to delete this activity?'),
+                                          actions: [
+                                            TextButton(
+                                              child: const Text('Cancel'),
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                            ),
+                                            TextButton(
+                                              child: const Text('Delete'),
+                                              onPressed: () {
+                                                _activityService
+                                                    .deleteWeekendActivity(
+                                                        activity.id);
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
