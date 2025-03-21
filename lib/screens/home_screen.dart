@@ -24,6 +24,7 @@ import '../models/post_model.dart';
 import '../models/weekend_activity_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/stories_widget.dart';
+import 'weekend_activities_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -50,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _requestPermissions() async {
     await PermissionService.checkAndRequestAllPermissions(context);
   }
+
   Future<void> _sendFriendRequest(
       BuildContext context, String currentUserId, UserModel otherUser) async {
     final friendService = FriendService();
@@ -74,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -83,13 +86,15 @@ class _HomeScreenState extends State<HomeScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Provider.of<feed.FeedProvider>(context, listen: false)
             .initializeFeed(userProvider.user!.uid);
-        Provider.of<app_notifications.NotificationProvider>(context, listen: false)
+        Provider.of<app_notifications.NotificationProvider>(context,
+                listen: false)
             .initializeNotifications(userProvider.user!.uid);
       });
     }
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, UserModel? currentUser) {
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, UserModel? currentUser) {
     return AppBar(
       elevation: 0,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -133,7 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: CircleAvatar(
             backgroundImage: currentUser?.photoUrl != null
                 ? NetworkImage(currentUser!.photoUrl!)
-                : const AssetImage('assets/images/default_profile.jpg') as ImageProvider,
+                : const AssetImage('assets/images/default_profile.jpg')
+                    as ImageProvider,
             radius: 15,
           ),
           onPressed: () {
@@ -169,7 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                final userProvider =
+                    Provider.of<UserProvider>(context, listen: false);
                 feedProvider.initializeFeed(userProvider.user?.uid);
               },
               child: const Text('Retry'),
@@ -191,27 +198,27 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildTrendingWeekendPlansSection(),
           _buildExploreEventsSection(),
           _buildActiveUsersSection(),
-          ...feedProvider.posts.map((feedPost) => _buildPostCard(
-              Post(
-                id: feedPost.id,
-                userId: feedPost.userId,
-                userName: feedPost.userName,
-                userPhotoUrl: feedPost.userPhotoUrl,
-                content: feedPost.content,
-                imageUrl: feedPost.imageUrl,
-                timestamp: feedPost.timestamp,
-                likes: feedPost.likes,
-                comments: feedPost.comments.map((comment) =>
-                    Comment(
-                      userId: comment.userId,
-                      userName: comment.userName,
-                      userPhotoUrl: comment.userPhotoUrl,
-                      content: comment.content,
-                      timestamp: comment.timestamp,
-                    )
-                ).toList(),
-              )
-          )).toList(),
+          ...feedProvider.posts
+              .map((feedPost) => _buildPostCard(Post(
+                    id: feedPost.id,
+                    userId: feedPost.userId,
+                    userName: feedPost.userName,
+                    userPhotoUrl: feedPost.userPhotoUrl,
+                    content: feedPost.content,
+                    imageUrl: feedPost.imageUrl,
+                    timestamp: feedPost.timestamp,
+                    likes: feedPost.likes,
+                    comments: feedPost.comments
+                        .map((comment) => Comment(
+                              userId: comment.userId,
+                              userName: comment.userName,
+                              userPhotoUrl: comment.userPhotoUrl,
+                              content: comment.content,
+                              timestamp: comment.timestamp,
+                            ))
+                        .toList(),
+                  )))
+              .toList(),
         ],
       ),
     );
@@ -253,9 +260,11 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildAddStoryButton(),
 
               // Example Weekend Mood Stories
-              _buildWeekendMoodStory('Party', Icons.local_fire_department, Colors.red),
+              _buildWeekendMoodStory(
+                  'Party', Icons.local_fire_department, Colors.red),
               _buildWeekendMoodStory('Chill', Icons.coffee, Colors.brown),
-              _buildWeekendMoodStory('Gaming', Icons.sports_esports, Colors.purple),
+              _buildWeekendMoodStory(
+                  'Gaming', Icons.sports_esports, Colors.purple),
               _buildWeekendMoodStory('Outdoor', Icons.landscape, Colors.green),
 
               // Fetch actual stories from Firebase here
@@ -285,17 +294,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Colors.grey[200],
                   image: user.photoUrl != null && user.photoUrl!.isNotEmpty
                       ? DecorationImage(
-                    image: CachedNetworkImageProvider(user.photoUrl!),
-                    fit: BoxFit.cover,
-                  )
+                          image: CachedNetworkImageProvider(user.photoUrl!),
+                          fit: BoxFit.cover,
+                        )
                       : null,
                 ),
                 child: user.photoUrl == null || user.photoUrl!.isEmpty
                     ? Icon(
-                  Icons.person,
-                  size: 40,
-                  color: Colors.grey[400],
-                )
+                        Icons.person,
+                        size: 40,
+                        color: Colors.grey[400],
+                      )
                     : null,
               ),
               Positioned(
@@ -390,9 +399,11 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-        final sentRequests = List<String>.from(userData['sentFriendRequests'] ?? []);
+        final sentRequests =
+            List<String>.from(userData['sentFriendRequests'] ?? []);
         final friends = List<String>.from(userData['friends'] ?? []);
-        final pendingRequests = List<String>.from(userData['pendingFriendRequests'] ?? []);
+        final pendingRequests =
+            List<String>.from(userData['pendingFriendRequests'] ?? []);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,7 +422,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      setState(() => _currentIndex = 1); // Switch to connections tab
+                      setState(
+                          () => _currentIndex = 1); // Switch to connections tab
                     },
                     child: const Text('See All'),
                   ),
@@ -523,13 +535,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 : null,
             child: user.photoUrl == null || user.photoUrl!.isEmpty
                 ? Text(
-              user.name[0].toUpperCase(),
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-              ),
-            )
+                    user.name[0].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  )
                 : null,
           ),
           const SizedBox(height: 12),
@@ -569,8 +581,8 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               textStyle: const TextStyle(fontSize: 14),
             ),
-          ),SizedBox(height: 12),
-
+          ),
+          SizedBox(height: 12),
         ],
       ),
     );
@@ -655,21 +667,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
 
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                itemCount: activities.length,
-                itemBuilder: (context, index) {
-                  final doc = activities[index];
-                  try {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final activity = WeekendActivity.fromMap(data, doc.id);
-                    return _buildWeekendPlanCard(activity);
-                  } catch (e) {
-                    print('Error parsing weekend activity: $e');
-                    return const SizedBox.shrink();
-                  }
-                },
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: activities.length,
+                      itemBuilder: (context, index) {
+                        final doc = activities[index];
+                        try {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final activity =
+                              WeekendActivity.fromMap(data, doc.id);
+                          return _buildWeekendPlanCard(activity);
+                        } catch (e) {
+                          print('Error parsing weekend activity: $e');
+                          return const SizedBox.shrink();
+                        }
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WeekendActivitiesScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('View All Activities'),
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -704,32 +739,33 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             height: 120,
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               image: activity.imageUrl != null
                   ? DecorationImage(
-                image: CachedNetworkImageProvider(activity.imageUrl!),
-                fit: BoxFit.cover,
-              )
+                      image: CachedNetworkImageProvider(activity.imageUrl!),
+                      fit: BoxFit.cover,
+                    )
                   : null,
               gradient: activity.imageUrl == null
                   ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Theme.of(context).primaryColor.withOpacity(0.7),
-                  Theme.of(context).primaryColor,
-                ],
-              )
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).primaryColor.withOpacity(0.7),
+                        Theme.of(context).primaryColor,
+                      ],
+                    )
                   : null,
             ),
             child: activity.imageUrl == null
                 ? Center(
-              child: Icon(
-                _getEventTypeIcon(activity.eventType),
-                color: Colors.white,
-                size: 40,
-              ),
-            )
+                    child: Icon(
+                      _getEventTypeIcon(activity.eventType),
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  )
                 : null,
           ),
 
@@ -742,7 +778,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Theme.of(context).primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -759,7 +796,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (activity.isPaid)
                       Container(
                         margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.amber.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -794,7 +832,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Date & Time
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                    const Icon(Icons.calendar_today,
+                        size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(
                       '${dateFormat.format(activity.date)} • ${timeFormat.format(activity.startTime)}',
@@ -834,7 +873,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     // Attendee avatars would go here
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.grey[200],
                         borderRadius: BorderRadius.circular(12),
@@ -853,7 +893,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Handle join event
                       },
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         textStyle: const TextStyle(fontSize: 14),
                       ),
                       child: const Text('Join'),
@@ -983,7 +1024,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  setState(() => _currentIndex = 1); // Switch to connections tab
+                  setState(
+                      () => _currentIndex = 1); // Switch to connections tab
                 },
                 child: const Text('See All'),
               ),
@@ -1054,19 +1096,22 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
-                      ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                      : null,
+                  backgroundColor:
+                      Theme.of(context).primaryColor.withOpacity(0.1),
+                  backgroundImage:
+                      user.photoUrl != null && user.photoUrl!.isNotEmpty
+                          ? CachedNetworkImageProvider(user.photoUrl!)
+                              as ImageProvider
+                          : null,
                   child: user.photoUrl == null || user.photoUrl!.isEmpty
                       ? Text(
-                    user.name[0].toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  )
+                          user.name[0].toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        )
                       : null,
                 ),
                 Positioned(
@@ -1160,9 +1205,12 @@ class _HomeScreenState extends State<HomeScreen> {
             type: BottomNavigationBarType.fixed,
             items: [
               _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0),
-              _buildNavItem(Icons.people_outline, Icons.people, 'Connections', 1),
-              _buildNavItem(Icons.chat_bubble_outline, Icons.chat_bubble, 'Chats', 2),
-              _buildNavItem(Icons.explore_outlined, Icons.explore, 'Explore', 3),
+              _buildNavItem(
+                  Icons.people_outline, Icons.people, 'Connections', 1),
+              _buildNavItem(
+                  Icons.chat_bubble_outline, Icons.chat_bubble, 'Chats', 2),
+              _buildNavItem(
+                  Icons.explore_outlined, Icons.explore, 'Explore', 3),
               _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4),
             ],
           ),
@@ -1170,9 +1218,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
-        onPressed: _showCreateWeekendPlanDialog,
-        child: const Icon(Icons.add),
-      )
+              onPressed: _showCreateWeekendPlanDialog,
+              child: const Icon(Icons.add),
+            )
           : null,
     );
   }
@@ -1244,7 +1292,8 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (_, controller) => Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Stack(
               children: [
@@ -1264,49 +1313,57 @@ class _HomeScreenState extends State<HomeScreen> {
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   Theme.of(context).primaryColor,
-                                  Theme.of(context).primaryColor.withOpacity(0.8),
+                                  Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.8),
                                 ],
                               ),
                               borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(20),
                               ),
                             ),
-                            child: user.photoUrl != null && user.photoUrl!.isNotEmpty && Uri.tryParse(user.photoUrl!)?.hasAbsolutePath == true
+                            child: user.photoUrl != null &&
+                                    user.photoUrl!.isNotEmpty &&
+                                    Uri.tryParse(user.photoUrl!)
+                                            ?.hasAbsolutePath ==
+                                        true
                                 ? ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(20),
-                              ),
-                              child: CachedNetworkImage(
-                                imageUrl: user.photoUrl!,
-                                fit: BoxFit.cover,
-                                errorWidget: (context, url, error) => Center(
-                                  child: Text(
-                                    user.name[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 72,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(20),
+                                    ),
+                                    child: CachedNetworkImage(
+                                      imageUrl: user.photoUrl!,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (context, url, error) =>
+                                          Center(
+                                        child: Text(
+                                          user.name[0].toUpperCase(),
+                                          style: const TextStyle(
+                                            fontSize: 72,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      user.name[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 72,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            )
-                                : Center(
-                              child: Text(
-                                user.name[0].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 72,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
                           ),
                           Positioned(
                             top: 16,
                             right: 16,
                             child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white),
+                              icon:
+                                  const Icon(Icons.close, color: Colors.white),
                               onPressed: () => Navigator.pop(context),
                             ),
                           ),
@@ -1322,7 +1379,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         user.name,
@@ -1362,7 +1420,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             MaterialPageRoute(
                                               builder: (context) => ChatScreen(
                                                 otherUser: user,
-                                                chatId: '${currentUser.uid}_${user.uid}',
+                                                chatId:
+                                                    '${currentUser.uid}_${user.uid}',
                                                 otherUserName: user.name,
                                               ),
                                             ),
@@ -1382,7 +1441,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 else
                                   ElevatedButton.icon(
                                     onPressed: () {
-                                      _sendFriendRequest(context, currentUser.uid, user);
+                                      _sendFriendRequest(
+                                          context, currentUser.uid, user);
                                       Navigator.pop(context);
                                     },
                                     icon: const Icon(Icons.person_add),
@@ -1447,8 +1507,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: user.skills.map((skill) {
                                   return Chip(
                                     label: Text(skill),
-                                    backgroundColor:
-                                    Theme.of(context).primaryColor.withOpacity(0.1),
+                                    backgroundColor: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.1),
                                     labelStyle: TextStyle(
                                       color: Theme.of(context).primaryColor,
                                     ),
@@ -1472,7 +1533,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: user.weekendInterests.map((interest) {
                                   return Chip(
                                     label: Text(interest),
-                                    backgroundColor: Colors.purple.withOpacity(0.1),
+                                    backgroundColor:
+                                        Colors.purple.withOpacity(0.1),
                                     labelStyle: const TextStyle(
                                       color: Colors.purple,
                                     ),
@@ -1495,13 +1557,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: user.availability.entries
                                   .where((entry) => entry.value)
                                   .map((entry) {
-                                final time = entry.key.split('_').map(
+                                final time = entry.key
+                                    .split('_')
+                                    .map(
                                       (word) =>
-                                  word[0].toUpperCase() + word.substring(1),
-                                ).join(' ');
+                                          word[0].toUpperCase() +
+                                          word.substring(1),
+                                    )
+                                    .join(' ');
                                 return Chip(
                                   label: Text(time),
-                                  backgroundColor: Colors.green.withOpacity(0.1),
+                                  backgroundColor:
+                                      Colors.green.withOpacity(0.1),
                                   labelStyle: const TextStyle(
                                     color: Colors.green,
                                   ),
@@ -1671,7 +1738,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() {
                           selectedDate = picked;
                           dateController.text =
-                          '${picked.day}/${picked.month}/${picked.year}';
+                              '${picked.day}/${picked.month}/${picked.year}';
                         });
                       }
                     },
@@ -1700,8 +1767,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () async {
-                      if (formKey.currentState!.validate() && selectedDate != null) {
-                        final currentUser = Provider.of<UserProvider>(context, listen: false).user;
+                      if (formKey.currentState!.validate() &&
+                          selectedDate != null) {
+                        final currentUser =
+                            Provider.of<UserProvider>(context, listen: false)
+                                .user;
                         if (currentUser == null) return;
 
                         try {
@@ -1722,7 +1792,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Weekend plan created successfully!'),
+                                content:
+                                    Text('Weekend plan created successfully!'),
                                 backgroundColor: Colors.green,
                               ),
                             );
@@ -1731,7 +1802,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error creating weekend plan: $e'),
+                                content:
+                                    Text('Error creating weekend plan: $e'),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -1754,7 +1826,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNotificationsOverlay() {
-    final notificationProvider = Provider.of<app_notifications.NotificationProvider>(context);
+    final notificationProvider =
+        Provider.of<app_notifications.NotificationProvider>(context);
     final notifications = notificationProvider.notifications;
 
     return Positioned(
@@ -1805,68 +1878,71 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: notifications.isEmpty
                       ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_off_outlined,
-                          size: 48,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No notifications yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                      : ListView.builder(
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = notifications[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: null, // We don't have sender photo in our model
-                          child: const Icon(Icons.person),
-                        ),
-                        title: Text(notification.title),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(notification.message),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatMessageTime(notification.timestamp as Timestamp?),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.notifications_off_outlined,
+                                size: 48,
+                                color: Colors.grey[400],
                               ),
-                            ),
-                          ],
-                        ),
-                        trailing: !notification.isRead
-                            ? Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            shape: BoxShape.circle,
+                              const SizedBox(height: 16),
+                              Text(
+                                'No notifications yet',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
                         )
-                            : null,
-                        onTap: () {
-                          // Mark as read
-                          notificationProvider.markAsRead(notification.id);
-                          // Handle notification tap based on type
-                          _handleNotificationTap(notification);
-                        },
-                      );
-                    },
-                  ),
+                      : ListView.builder(
+                          itemCount: notifications.length,
+                          itemBuilder: (context, index) {
+                            final notification = notifications[index];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage:
+                                    null, // We don't have sender photo in our model
+                                child: const Icon(Icons.person),
+                              ),
+                              title: Text(notification.title),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(notification.message),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatMessageTime(
+                                        notification.timestamp as Timestamp?),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: !notification.isRead
+                                  ? Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).primaryColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    )
+                                  : null,
+                              onTap: () {
+                                // Mark as read
+                                notificationProvider
+                                    .markAsRead(notification.id);
+                                // Handle notification tap based on type
+                                _handleNotificationTap(notification);
+                              },
+                            );
+                          },
+                        ),
                 ),
                 const Divider(height: 1),
                 // Footer
@@ -1914,8 +1990,10 @@ class _HomeScreenState extends State<HomeScreen> {
           // Find the other user ID from the chat ID
           List<String> userIds = chatId.split('_');
           if (userIds.length == 2) {
-            final currentUser = Provider.of<UserProvider>(context, listen: false).user;
-            final otherUserId = userIds[0] == currentUser?.uid ? userIds[1] : userIds[0];
+            final currentUser =
+                Provider.of<UserProvider>(context, listen: false).user;
+            final otherUserId =
+                userIds[0] == currentUser?.uid ? userIds[1] : userIds[0];
 
             // Fetch user data
             FirebaseFirestore.instance
@@ -1942,7 +2020,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         break;
       case 'weekend_plan':
-      // Navigate to the specific weekend plan
+        // Navigate to the specific weekend plan
         if (notification.relatedId != null) {
           final planId = notification.relatedId!;
           Navigator.push(
@@ -1955,7 +2033,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         break;
       default:
-      // Default action is to go to the notifications screen
+        // Default action is to go to the notifications screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1979,7 +2057,8 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundImage: post.userPhotoUrl != null
                   ? CachedNetworkImageProvider(post.userPhotoUrl!)
                   : null,
-              child: post.userPhotoUrl == null ? const Icon(Icons.person) : null,
+              child:
+                  post.userPhotoUrl == null ? const Icon(Icons.person) : null,
             ),
             title: Text(post.userName),
             subtitle: Text(timeago.format(post.timestamp)),
@@ -2026,7 +2105,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? Icons.favorite
                       : Icons.favorite_border,
                 ),
-                color: post.likes.contains(currentUser?.uid) ? Colors.red : null, // Move color here
+                color: post.likes.contains(currentUser?.uid)
+                    ? Colors.red
+                    : null, // Move color here
                 onPressed: () {
                   if (currentUser != null) {
                     Provider.of<feed.FeedProvider>(context, listen: false)
@@ -2132,7 +2213,8 @@ class AnimatedCard extends StatefulWidget {
   State<AnimatedCard> createState() => _AnimatedCardState();
 }
 
-class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderStateMixin {
+class _AnimatedCardState extends State<AnimatedCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
@@ -2207,19 +2289,22 @@ class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderSt
                         tag: 'profile-${user.uid}',
                         child: CircleAvatar(
                           radius: 40,
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                          backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
-                              ? CachedNetworkImageProvider(user.photoUrl!) as ImageProvider
-                              : null,
+                          backgroundColor:
+                              Theme.of(context).primaryColor.withOpacity(0.1),
+                          backgroundImage:
+                              user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                  ? CachedNetworkImageProvider(user.photoUrl!)
+                                      as ImageProvider
+                                  : null,
                           child: user.photoUrl == null
                               ? Text(
-                            user.name[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          )
+                                  user.name[0].toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                )
                               : null,
                         ),
                       ),
@@ -2330,7 +2415,6 @@ class MessagesTab extends StatelessWidget {
           otherUser: otherUser,
           chatId: chatId,
           otherUserName: otherUser.name,
-
         ),
       ),
     );
@@ -2401,7 +2485,8 @@ class MessagesTab extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const Icon(Icons.error_outline,
+                        size: 48, color: Colors.red),
                     const SizedBox(height: 16),
                     Text(
                       'Error: ${snapshot.error}',
@@ -2417,10 +2502,10 @@ class MessagesTab extends StatelessWidget {
             }
 
             final chats = snapshot.data!.docs.where((chat) {
-              final participants = List<String>.from(chat.data()['participants'] ?? []);
-              final otherUserId = participants.firstWhere(
-                      (id) => id != currentUser.uid,
-                  orElse: () => '');
+              final participants =
+                  List<String>.from(chat.data()['participants'] ?? []);
+              final otherUserId = participants
+                  .firstWhere((id) => id != currentUser.uid, orElse: () => '');
               // Only show chats with friends
               return friends.contains(otherUserId);
             }).toList();
@@ -2462,9 +2547,10 @@ class MessagesTab extends StatelessWidget {
               itemCount: chats.length,
               itemBuilder: (context, index) {
                 final chat = chats[index].data();
-                final participants = List<String>.from(chat['participants'] ?? []);
+                final participants =
+                    List<String>.from(chat['participants'] ?? []);
                 final otherUserId = participants.firstWhere(
-                        (id) => id != currentUser.uid,
+                    (id) => id != currentUser.uid,
                     orElse: () => '');
 
                 if (otherUserId.isEmpty) {
@@ -2482,15 +2568,17 @@ class MessagesTab extends StatelessWidget {
                       return const SizedBox.shrink();
                     }
 
-                    final otherUser = UserModel.fromDocumentSnapshot(userSnapshot.data!);
+                    final otherUser =
+                        UserModel.fromDocumentSnapshot(userSnapshot.data!);
                     final lastMessage = chat['lastMessage'] as String?;
-                    final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
+                    final lastMessageTime =
+                        chat['lastMessageTime'] as Timestamp?;
                     final unreadCount =
                         chat['unreadCount${currentUser.uid}'] as int? ?? 0;
 
                     return Card(
-                      margin:
-                      const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 8),
                       elevation: 0,
                       child: ListTile(
                         onTap: () {
@@ -2501,22 +2589,22 @@ class MessagesTab extends StatelessWidget {
                           child: CircleAvatar(
                             radius: 28,
                             backgroundColor:
-                            Theme.of(context).primaryColor.withOpacity(0.1),
+                                Theme.of(context).primaryColor.withOpacity(0.1),
                             backgroundImage: otherUser.photoUrl != null &&
-                                otherUser.photoUrl!.isNotEmpty
-                                ? CachedNetworkImageProvider(otherUser.photoUrl!)
-                            as ImageProvider
+                                    otherUser.photoUrl!.isNotEmpty
+                                ? CachedNetworkImageProvider(
+                                    otherUser.photoUrl!) as ImageProvider
                                 : null,
                             child: otherUser.photoUrl == null ||
-                                otherUser.photoUrl!.isEmpty
+                                    otherUser.photoUrl!.isEmpty
                                 ? Text(
-                              otherUser.name[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            )
+                                    otherUser.name[0].toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  )
                                 : null,
                           ),
                         ),
@@ -2529,18 +2617,18 @@ class MessagesTab extends StatelessWidget {
                         ),
                         subtitle: lastMessage != null
                             ? Text(
-                          lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: unreadCount > 0
-                                ? Colors.black87
-                                : Colors.grey[600],
-                            fontWeight: unreadCount > 0
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                          ),
-                        )
+                                lastMessage,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: unreadCount > 0
+                                      ? Colors.black87
+                                      : Colors.grey[600],
+                                  fontWeight: unreadCount > 0
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                                ),
+                              )
                             : null,
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -2647,17 +2735,17 @@ class ProfileTab extends StatelessWidget {
                   CircleAvatar(
                     radius: 64,
                     backgroundImage: userData.photoUrl != null &&
-                        userData.photoUrl!.isNotEmpty
+                            userData.photoUrl!.isNotEmpty
                         ? CachedNetworkImageProvider(userData.photoUrl!)
-                    as ImageProvider
+                            as ImageProvider
                         : null,
                     child:
-                    userData.photoUrl == null || userData.photoUrl!.isEmpty
-                        ? Text(
-                      userData.name[0].toUpperCase(),
-                      style: const TextStyle(fontSize: 48),
-                    )
-                        : null,
+                        userData.photoUrl == null || userData.photoUrl!.isEmpty
+                            ? Text(
+                                userData.name[0].toUpperCase(),
+                                style: const TextStyle(fontSize: 48),
+                              )
+                            : null,
                   ),
                   Positioned(
                     bottom: 0,

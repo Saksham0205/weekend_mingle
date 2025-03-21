@@ -6,7 +6,8 @@ class WeekendActivityService {
   final CollectionReference _activitiesCollection;
 
   WeekendActivityService()
-      : _activitiesCollection = FirebaseFirestore.instance.collection('weekend_activities');
+      : _activitiesCollection =
+            FirebaseFirestore.instance.collection('weekend_activities');
 
   // Get all weekend activities
   Stream<List<WeekendActivity>> getWeekendActivities() {
@@ -16,7 +17,7 @@ class WeekendActivityService {
         .map((snapshot) {
       return snapshot.docs
           .map((doc) => WeekendActivity.fromFirestore(
-          doc as DocumentSnapshot<Map<String, dynamic>>, null))
+              doc as DocumentSnapshot<Map<String, dynamic>>, null))
           .toList();
     });
   }
@@ -30,7 +31,7 @@ class WeekendActivityService {
         .map((snapshot) {
       return snapshot.docs
           .map((doc) => WeekendActivity.fromFirestore(
-          doc as DocumentSnapshot<Map<String, dynamic>>, null))
+              doc as DocumentSnapshot<Map<String, dynamic>>, null))
           .toList();
     });
   }
@@ -43,6 +44,15 @@ class WeekendActivityService {
           docSnapshot as DocumentSnapshot<Map<String, dynamic>>, null);
     }
     return null;
+  }
+
+  // Get a specific weekend activity as a stream
+  Stream<WeekendActivity?> getWeekendActivityStream(String activityId) {
+    return _activitiesCollection.doc(activityId).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return WeekendActivity.fromFirestore(
+          doc as DocumentSnapshot<Map<String, dynamic>>, null);
+    });
   }
 
   // Create a new weekend activity
@@ -126,7 +136,8 @@ class WeekendActivityService {
         throw Exception('Activity is at full capacity');
       }
 
-      final updatedAttendees = List<String>.from(activity.attendees)..add(userId);
+      final updatedAttendees = List<String>.from(activity.attendees)
+        ..add(userId);
 
       transaction.update(activityRef, {
         'attendees': updatedAttendees,
@@ -158,7 +169,8 @@ class WeekendActivityService {
         throw Exception('Creator cannot leave the activity');
       }
 
-      final updatedAttendees = List<String>.from(activity.attendees)..remove(userId);
+      final updatedAttendees = List<String>.from(activity.attendees)
+        ..remove(userId);
 
       transaction.update(activityRef, {
         'attendees': updatedAttendees,
@@ -185,7 +197,8 @@ class WeekendActivityService {
         throw Exception('User has already expressed interest in this activity');
       }
 
-      final updatedInterestedUsers = List<String>.from(activity.interestedUsers)..add(userId);
+      final updatedInterestedUsers = List<String>.from(activity.interestedUsers)
+        ..add(userId);
 
       transaction.update(activityRef, {
         'interestedUsers': updatedInterestedUsers,
@@ -211,7 +224,8 @@ class WeekendActivityService {
         throw Exception('User has not expressed interest in this activity');
       }
 
-      final updatedInterestedUsers = List<String>.from(activity.interestedUsers)..remove(userId);
+      final updatedInterestedUsers = List<String>.from(activity.interestedUsers)
+        ..remove(userId);
 
       transaction.update(activityRef, {
         'interestedUsers': updatedInterestedUsers,
