@@ -63,42 +63,46 @@ class _WeekendActivityDetailScreenState
             return const Center(child: Text('Activity not found'));
           }
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                WeekendActivityCard(
-                  activity: activity,
-                  currentUserId: Provider.of<UserProvider>(context).user?.uid,
-                  isDetailView: true,
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Attendees',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          return Column(
+            children: [
+              // Activity card
+              WeekendActivityCard(
+                activity: activity,
+                currentUserId: Provider.of<UserProvider>(context).user?.uid,
+                isDetailView: true,
+              ),
+
+              // Attendees header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Attendees',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          '${activity.currentAttendees} attending',
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      child: Text(
+                        '${activity.currentAttendees} attending',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                StreamBuilder<List<UserModel>>(
+              ),
+
+              // Attendees list - wrapped in Expanded
+              Expanded(
+                child: StreamBuilder<List<UserModel>>(
                   stream: _attendeesStream,
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
@@ -118,11 +122,10 @@ class _WeekendActivityDetailScreenState
                         ),
                       );
                     }
-                    
+
                     return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: attendees.length,
+                      padding: const EdgeInsets.only(bottom: 16),
                       itemBuilder: (context, index) {
                         final attendee = attendees[index];
                         return Card(
@@ -144,16 +147,16 @@ class _WeekendActivityDetailScreenState
                                 attendee.profession ?? 'No profession listed'),
                             trailing: attendee.uid == activity.creatorId
                                 ? Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .primaryColor
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Text('Creator'),
-                                  )
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text('Creator'),
+                            )
                                 : null,
                           ),
                         );
@@ -161,9 +164,8 @@ class _WeekendActivityDetailScreenState
                     );
                   },
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
