@@ -720,11 +720,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final timeFormat = DateFormat('h:mm a');
 
     return Container(
-      width: 250,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      width: ResponsiveHelper.getResponsiveWidth(250),
+      height: ResponsiveHelper.getResponsiveHeight(280), // Set a fixed height
+      margin: EdgeInsets.symmetric(
+        horizontal: ResponsiveHelper.getResponsiveWidth(8),
+        vertical: ResponsiveHelper.getResponsiveHeight(4),
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveWidth(12)),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -739,10 +743,10 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Event Image or Placeholder
           Container(
-            height: 120,
+            height: ResponsiveHelper.getResponsiveHeight(120),
             decoration: BoxDecoration(
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+                  BorderRadius.vertical(top: Radius.circular(ResponsiveHelper.getResponsiveWidth(12))),
               image: activity.imageUrl != null
                   ? DecorationImage(
                       image: CachedNetworkImageProvider(activity.imageUrl!),
@@ -765,145 +769,167 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Icon(
                       _getEventTypeIcon(activity.eventType),
                       color: Colors.white,
-                      size: 40,
+                      size: ResponsiveHelper.getResponsiveWidth(40),
                     ),
                   )
                 : null,
           ),
 
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Event Name & Category
-                Row(
+          // Content area with scrolling capability for overflow
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(ResponsiveHelper.getResponsiveWidth(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        activity.eventType,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (activity.isPaid)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
+                    // Event Name & Category
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: ResponsiveHelper.getResponsiveWidth(8),
+                            vertical: ResponsiveHelper.getResponsiveHeight(4),
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveWidth(12)),
+                          ),
+                          child: Text(
+                            activity.eventType,
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
+                        if (activity.isPaid)
+                          Container(
+                            margin: EdgeInsets.only(left: ResponsiveHelper.getResponsiveWidth(8)),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ResponsiveHelper.getResponsiveWidth(8),
+                              vertical: ResponsiveHelper.getResponsiveHeight(4),
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveWidth(12)),
+                            ),
+                            child: Text(
+                              '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
+                              style: TextStyle(
+                                fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                                color: Colors.amber,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
 
-                const SizedBox(height: 8),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
 
-                // Event Title
-                Text(
-                  activity.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 8),
-
-                // Date & Time
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today,
-                        size: 12, color: Colors.grey),
-                    const SizedBox(width: 4),
+                    // Event Title
                     Text(
-                      '${dateFormat.format(activity.date)} • ${timeFormat.format(activity.startTime)}',
+                      activity.title,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(16),
+                        fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: 4),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
 
-                // Location
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 12, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        activity.location,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                    // Date & Time
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: ResponsiveHelper.getResponsiveWidth(12),
+                          color: Colors.grey,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Attendees & Join Button
-                Row(
-                  children: [
-                    // Attendee avatars would go here
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${activity.currentAttendees}/${activity.capacity}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[800],
+                        SizedBox(width: ResponsiveHelper.getResponsiveWidth(4)),
+                        Text(
+                          '${dateFormat.format(activity.date)} • ${timeFormat.format(activity.startTime)}',
+                          style: TextStyle(
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle join event
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        textStyle: const TextStyle(fontSize: 14),
-                      ),
-                      child: const Text('Join'),
+
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(4)),
+
+                    // Location
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: ResponsiveHelper.getResponsiveWidth(12),
+                          color: Colors.grey,
+                        ),
+                        SizedBox(width: ResponsiveHelper.getResponsiveWidth(4)),
+                        Expanded(
+                          child: Text(
+                            activity.location,
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(12)),
+
+                    // Attendees & Join Button
+                    Row(
+                      children: [
+                        // Attendee avatars would go here
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: ResponsiveHelper.getResponsiveWidth(8),
+                            vertical: ResponsiveHelper.getResponsiveHeight(4),
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveWidth(12)),
+                          ),
+                          child: Text(
+                            '${activity.currentAttendees}/${activity.capacity}',
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Handle join event
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ResponsiveHelper.getResponsiveWidth(16),
+                              vertical: ResponsiveHelper.getResponsiveHeight(8),
+                            ),
+                            textStyle: TextStyle(
+                              fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                            ),
+                          ),
+                          child: const Text('Join'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
