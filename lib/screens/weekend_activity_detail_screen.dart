@@ -72,11 +72,30 @@ class _WeekendActivityDetailScreenState
                   currentUserId: Provider.of<UserProvider>(context).user?.uid,
                   isDetailView: true,
                 ),
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Attendees',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Attendees',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '${activity.currentAttendees} attending',
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 StreamBuilder<List<UserModel>>(
@@ -91,37 +110,52 @@ class _WeekendActivityDetailScreenState
                     }
 
                     final attendees = snapshot.data ?? [];
+                    if (attendees.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: Text('No attendees yet'),
+                        ),
+                      );
+                    }
+                    
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: attendees.length,
                       itemBuilder: (context, index) {
                         final attendee = attendees[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: attendee.photoUrl != null
-                                ? NetworkImage(attendee.photoUrl!)
-                                : null,
-                            child: attendee.photoUrl == null
-                                ? const Icon(Icons.person)
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: attendee.photoUrl != null
+                                  ? NetworkImage(attendee.photoUrl!)
+                                  : null,
+                              child: attendee.photoUrl == null
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            title: Text(
+                              attendee.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(
+                                attendee.profession ?? 'No profession listed'),
+                            trailing: attendee.uid == activity.creatorId
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text('Creator'),
+                                  )
                                 : null,
                           ),
-                          title: Text(attendee.name),
-                          subtitle: Text(
-                              attendee.profession ?? 'No profession listed'),
-                          trailing: attendee.uid == activity.creatorId
-                              ? Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .primaryColor
-                                        .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text('Creator'),
-                                )
-                              : null,
                         );
                       },
                     );

@@ -161,27 +161,174 @@ class WeekendActivityCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Content section with flexible layout
-                    Expanded(child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: horizontalPadding,
-                            vertical: verticalPadding / 2,
-                          ),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight:
-                                  constraints.maxHeight - verticalPadding,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
+                    // Content section with fixed layout (no scrolling)
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: verticalPadding / 2,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Event type and price tags
+                            Row(
                               children: [
-                                // Event type and price tags
-                                Row(
-                                  children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: horizontalPadding / 2,
+                                    vertical: verticalPadding / 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(
+                                        borderRadius / 2),
+                                  ),
+                                  child: Text(
+                                    activity.eventType,
+                                    style: TextStyle(
+                                      fontSize: smallFontSize,
+                                      color: Theme.of(context).primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                if (activity.isPaid)
+                                  Container(
+                                    margin: EdgeInsets.only(
+                                        left: horizontalPadding / 2),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: horizontalPadding / 2,
+                                      vertical: verticalPadding / 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(
+                                          borderRadius / 2),
+                                    ),
+                                    child: Text(
+                                      '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
+                                      style: TextStyle(
+                                        fontSize: smallFontSize,
+                                        color: Colors.amber,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            SizedBox(height: verticalSpacing),
+
+                            // Title
+                            Text(
+                              activity.title,
+                              style: TextStyle(
+                                fontSize: titleFontSize,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: isDetailView ? null : 2,
+                              overflow: isDetailView
+                                  ? null
+                                  : TextOverflow.ellipsis,
+                            ),
+
+                            // Description only in detail view
+                            if (isDetailView) ...[
+                              SizedBox(height: verticalSpacing),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Text(
+                                    activity.description,
+                                    style: TextStyle(
+                                      fontSize: ResponsiveHelper
+                                          .getResponsiveFontSize(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            SizedBox(height: verticalSpacing),
+
+                            // Date info
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: iconSize * 0.6,
+                                  color: Colors.grey[600],
+                                ),
+                                SizedBox(width: horizontalPadding / 3),
+                                Expanded(
+                                  child: Text(
+                                    DateFormat('MMM dd, yyyy')
+                                        .format(activity.date),
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: smallFontSize,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Time info
+                            SizedBox(height: verticalSpacing / 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: iconSize * 0.6,
+                                  color: Colors.grey[600],
+                                ),
+                                SizedBox(width: horizontalPadding / 3),
+                                Expanded(
+                                  child: Text(
+                                    '${DateFormat('h:mm a').format(activity.startTime)} - ${DateFormat('h:mm a').format(activity.endTime)}',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: smallFontSize,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Location info
+                            SizedBox(height: verticalSpacing / 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: iconSize * 0.6,
+                                  color: Colors.grey[600],
+                                ),
+                                SizedBox(width: horizontalPadding / 3),
+                                Expanded(
+                                  child: Text(
+                                    activity.location,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: smallFontSize,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Action buttons (only if not in detail view)
+                            if (!isDetailView) ...[
+                              SizedBox(height: verticalSpacing),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (isCreator)
                                     Container(
                                       padding: EdgeInsets.symmetric(
                                         horizontal: horizontalPadding / 2,
@@ -195,411 +342,51 @@ class WeekendActivityCard extends StatelessWidget {
                                             borderRadius / 2),
                                       ),
                                       child: Text(
-                                        activity.eventType,
+                                        'Creator',
                                         style: TextStyle(
                                           fontSize: smallFontSize,
                                           color: Theme.of(context).primaryColor,
-                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ),
-                                    if (activity.isPaid)
-                                      Container(
-                                        margin: EdgeInsets.only(
-                                            left: horizontalPadding / 2),
+                                    )
+                                  else if (isAttending)
+                                    ElevatedButton.icon(
+                                      icon: Icon(Icons.check, size: iconSize * 0.7),
+                                      label: Text(
+                                        'Attending',
+                                        style: TextStyle(fontSize: smallFontSize),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
                                         padding: EdgeInsets.symmetric(
                                           horizontal: horizontalPadding / 2,
                                           vertical: verticalPadding / 2,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                              borderRadius / 2),
-                                        ),
-                                        child: Text(
-                                          '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
-                                          style: TextStyle(
-                                            fontSize: smallFontSize,
-                                            color: Colors.amber,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        backgroundColor:
+                                            Theme.of(context).primaryColor,
+                                      ),
+                                      onPressed: null,
+                                    )
+                                  else
+                                    ElevatedButton(
+                                      onPressed: onTap,
+                                      style: ElevatedButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: horizontalPadding / 2,
+                                          vertical: verticalPadding / 2,
                                         ),
                                       ),
-                                  ],
-                                ),
-                                SizedBox(height: verticalSpacing),
-
-                                // Title
-                                Text(
-                                  activity.title,
-                                  style: TextStyle(
-                                    fontSize: titleFontSize,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: isDetailView ? null : 2,
-                                  overflow: isDetailView
-                                      ? null
-                                      : TextOverflow.ellipsis,
-                                ),
-
-                                // Description only in detail view
-                                if (isDetailView) ...[
-                                  SizedBox(height: verticalSpacing),
-                                  Text(
-                                    activity.description,
-                                    style: TextStyle(
-                                      fontSize: ResponsiveHelper
-                                          .getResponsiveFontSize(14),
-                                    ),
-                                  ),
-                                ],
-                                SizedBox(height: verticalSpacing),
-
-                                // Date info
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.calendar_today,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: horizontalPadding / 3),
-                                    Text(
-                                      DateFormat('MMM dd, yyyy')
-                                          .format(activity.date),
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: smallFontSize,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                // Time info
-                                SizedBox(height: verticalSpacing / 2),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.access_time,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: horizontalPadding / 3),
-                                    Flexible(
                                       child: Text(
-                                        '${DateFormat('h:mm a').format(activity.startTime)} - ${DateFormat('h:mm a').format(activity.endTime)}',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: smallFontSize,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                                        'Join',
+                                        style: TextStyle(fontSize: smallFontSize),
                                       ),
                                     ),
-                                  ],
-                                ),
-
-                                // Location
-                                SizedBox(height: verticalSpacing / 2),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: iconSize * 0.8,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: horizontalPadding / 3),
-                                    Expanded(
-                                      child: Text(
-                                        activity.location,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: smallFontSize,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                // Attendees List Section
-                                if (isDetailView) ...[
-                                  SizedBox(height: verticalSpacing * 2),
-                                  Text(
-                                    'Attendees (${activity.currentAttendees}/${activity.capacity})',
-                                    style: TextStyle(
-                                      fontSize: ResponsiveHelper
-                                          .getResponsiveFontSize(16),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: verticalSpacing),
-                                  Container(
-                                    padding: EdgeInsets.all(horizontalPadding),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(
-                                          borderRadius / 2),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Creator info
-                                        Row(
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 20,
-                                              backgroundImage: activity
-                                                          .creatorPhotoUrl !=
-                                                      null
-                                                  ? CachedNetworkImageProvider(
-                                                      activity.creatorPhotoUrl!)
-                                                  : null,
-                                              child: activity.creatorPhotoUrl ==
-                                                      null
-                                                  ? Icon(Icons.person)
-                                                  : null,
-                                            ),
-                                            SizedBox(
-                                                width: horizontalPadding / 2),
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  activity.creatorName,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: smallFontSize,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  'Creator',
-                                                  style: TextStyle(
-                                                    color: Colors.grey[600],
-                                                    fontSize:
-                                                        smallFontSize * 0.9,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        if (activity.attendees.length > 1) ...[
-                                          Divider(height: verticalSpacing * 3),
-                                          Text(
-                                            'Other Attendees',
-                                            style: TextStyle(
-                                              fontSize: smallFontSize,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          SizedBox(height: verticalSpacing),
-                                          Wrap(
-                                            spacing: horizontalPadding / 2,
-                                            runSpacing: verticalSpacing,
-                                            children: activity.attendees
-                                                .where((id) =>
-                                                    id != activity.creatorId)
-                                                .map((attendeeId) => Chip(
-                                                      avatar: CircleAvatar(
-                                                        child: Icon(
-                                                            Icons.person,
-                                                            size: 16),
-                                                      ),
-                                                      label: Text('Attendee'),
-                                                      backgroundColor:
-                                                          Colors.blue[100],
-                                                    ))
-                                                .toList(),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
                                 ],
-
-                                // Action buttons with flexible layout
-                                if (isDetailView && currentUserId != null) ...[
-                                  SizedBox(height: verticalSpacing * 2),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      if (!isCreator)
-                                        Expanded(
-                                          child: ElevatedButton(
-                                            onPressed: activity
-                                                            .currentAttendees >=
-                                                        activity.capacity &&
-                                                    !isAttending
-                                                ? null // Disable button if activity is full
-                                                : () async {
-                                                    try {
-                                                      if (isAttending) {
-                                                        await _activityService
-                                                            .leaveWeekendActivity(
-                                                          activity.id,
-                                                          currentUserId!,
-                                                        );
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                                'You have left the activity'),
-                                                            backgroundColor:
-                                                                Colors.orange,
-                                                            duration: Duration(
-                                                                seconds: 2),
-                                                          ),
-                                                        );
-                                                      } else {
-                                                        await _activityService
-                                                            .joinWeekendActivity(
-                                                          activity.id,
-                                                          currentUserId!,
-                                                        );
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                                'Successfully joined the activity!'),
-                                                            backgroundColor:
-                                                                Colors.green,
-                                                            duration: Duration(
-                                                                seconds: 2),
-                                                          ),
-                                                        );
-                                                      }
-                                                    } catch (e) {
-                                                      String errorMessage =
-                                                          e.toString();
-                                                      if (errorMessage.contains(
-                                                          'capacity')) {
-                                                        errorMessage =
-                                                            'This activity is already full';
-                                                      }
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                              errorMessage),
-                                                          backgroundColor:
-                                                              Colors.red,
-                                                          duration: Duration(
-                                                              seconds: 3),
-                                                        ),
-                                                      );
-                                                    }
-                                                  },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: isAttending
-                                                  ? Colors.orange
-                                                  : null,
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: verticalPadding,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              isAttending ? 'Leave' : 'Join',
-                                              style: TextStyle(
-                                                fontSize: ResponsiveHelper
-                                                    .getResponsiveFontSize(14),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      if (!isCreator)
-                                        SizedBox(width: horizontalPadding / 2),
-                                      if (!isCreator)
-                                        Expanded(
-                                          child: OutlinedButton(
-                                            onPressed: () async {
-                                              try {
-                                                if (isInterested) {
-                                                  await _activityService
-                                                      .removeInterest(
-                                                    activity.id,
-                                                    currentUserId!,
-                                                  );
-                                                } else {
-                                                  await _activityService
-                                                      .expressInterest(
-                                                    activity.id,
-                                                    currentUserId!,
-                                                  );
-                                                }
-                                              } catch (e) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(e.toString()),
-                                                    backgroundColor: Colors.red,
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                            style: OutlinedButton.styleFrom(
-                                              foregroundColor: isInterested
-                                                  ? Colors.orange
-                                                  : null,
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: verticalPadding,
-                                                horizontal: horizontalPadding,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              isInterested
-                                                  ? 'Not Interested'
-                                                  : 'Interested',
-                                              style: TextStyle(
-                                                fontSize: ResponsiveHelper
-                                                    .getResponsiveFontSize(14),
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                        ),
-                                      if (isCreator)
-                                        SizedBox(
-                                          width: constraints.maxWidth > 600
-                                              ? constraints.maxWidth * 0.45
-                                              : constraints.maxWidth,
-                                          child: ElevatedButton(
-                                            onPressed: () {
-                                              // TODO: Implement edit functionality
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: verticalPadding,
-                                                horizontal: horizontalPadding,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              'Edit Activity',
-                                              style: TextStyle(
-                                                fontSize: ResponsiveHelper
-                                                    .getResponsiveFontSize(14),
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  // Add padding at the bottom for detail view
-                                  SizedBox(height: verticalPadding * 2),
-                                ],
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    )),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               );
