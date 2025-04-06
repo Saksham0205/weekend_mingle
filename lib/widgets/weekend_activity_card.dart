@@ -322,6 +322,104 @@ class WeekendActivityCard extends StatelessWidget {
                                   ],
                                 ),
 
+                                // Attendees List Section
+                                if (isDetailView) ...[
+                                  SizedBox(height: verticalSpacing * 2),
+                                  Text(
+                                    'Attendees (${activity.currentAttendees}/${activity.capacity})',
+                                    style: TextStyle(
+                                      fontSize: ResponsiveHelper
+                                          .getResponsiveFontSize(16),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: verticalSpacing),
+                                  Container(
+                                    padding: EdgeInsets.all(horizontalPadding),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(
+                                          borderRadius / 2),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Creator info
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 20,
+                                              backgroundImage: activity
+                                                          .creatorPhotoUrl !=
+                                                      null
+                                                  ? CachedNetworkImageProvider(
+                                                      activity.creatorPhotoUrl!)
+                                                  : null,
+                                              child: activity.creatorPhotoUrl ==
+                                                      null
+                                                  ? Icon(Icons.person)
+                                                  : null,
+                                            ),
+                                            SizedBox(
+                                                width: horizontalPadding / 2),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  activity.creatorName,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: smallFontSize,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Creator',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize:
+                                                        smallFontSize * 0.9,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        if (activity.attendees.length > 1) ...[
+                                          Divider(height: verticalSpacing * 3),
+                                          Text(
+                                            'Other Attendees',
+                                            style: TextStyle(
+                                              fontSize: smallFontSize,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          SizedBox(height: verticalSpacing),
+                                          Wrap(
+                                            spacing: horizontalPadding / 2,
+                                            runSpacing: verticalSpacing,
+                                            children: activity.attendees
+                                                .where((id) =>
+                                                    id != activity.creatorId)
+                                                .map((attendeeId) => Chip(
+                                                      avatar: CircleAvatar(
+                                                        child: Icon(
+                                                            Icons.person,
+                                                            size: 16),
+                                                      ),
+                                                      label: Text('Attendee'),
+                                                      backgroundColor:
+                                                          Colors.blue[100],
+                                                    ))
+                                                .toList(),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+
                                 // Action buttons with flexible layout
                                 if (isDetailView && currentUserId != null) ...[
                                   SizedBox(height: verticalSpacing * 2),
@@ -332,63 +430,68 @@ class WeekendActivityCard extends StatelessWidget {
                                       if (!isCreator)
                                         Expanded(
                                           child: ElevatedButton(
-                                            onPressed: isAttending
-                                                ? () async {
-                                                    try {
-                                                      await _activityService
-                                                          .leaveWeekendActivity(
-                                                        activity.id,
-                                                        currentUserId!,
-                                                      );
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                              'Left the activity'),
-                                                          backgroundColor:
-                                                              Colors.orange,
-                                                        ),
-                                                      );
-                                                    } catch (e) {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                              e.toString()),
-                                                          backgroundColor:
-                                                              Colors.red,
-                                                        ),
-                                                      );
-                                                    }
-                                                  }
+                                            onPressed: activity
+                                                            .currentAttendees >=
+                                                        activity.capacity &&
+                                                    !isAttending
+                                                ? null // Disable button if activity is full
                                                 : () async {
                                                     try {
-                                                      await _activityService
-                                                          .joinWeekendActivity(
-                                                        activity.id,
-                                                        currentUserId!,
-                                                      );
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                              'Joined the activity!'),
-                                                          backgroundColor:
-                                                              Colors.green,
-                                                        ),
-                                                      );
+                                                      if (isAttending) {
+                                                        await _activityService
+                                                            .leaveWeekendActivity(
+                                                          activity.id,
+                                                          currentUserId!,
+                                                        );
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                                'You have left the activity'),
+                                                            backgroundColor:
+                                                                Colors.orange,
+                                                            duration: Duration(
+                                                                seconds: 2),
+                                                          ),
+                                                        );
+                                                      } else {
+                                                        await _activityService
+                                                            .joinWeekendActivity(
+                                                          activity.id,
+                                                          currentUserId!,
+                                                        );
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                                'Successfully joined the activity!'),
+                                                            backgroundColor:
+                                                                Colors.green,
+                                                            duration: Duration(
+                                                                seconds: 2),
+                                                          ),
+                                                        );
+                                                      }
                                                     } catch (e) {
+                                                      String errorMessage =
+                                                          e.toString();
+                                                      if (errorMessage.contains(
+                                                          'capacity')) {
+                                                        errorMessage =
+                                                            'This activity is already full';
+                                                      }
                                                       ScaffoldMessenger.of(
                                                               context)
                                                           .showSnackBar(
                                                         SnackBar(
                                                           content: Text(
-                                                              e.toString()),
+                                                              errorMessage),
                                                           backgroundColor:
                                                               Colors.red,
+                                                          duration: Duration(
+                                                              seconds: 3),
                                                         ),
                                                       );
                                                     }
