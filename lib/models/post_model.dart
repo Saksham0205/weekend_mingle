@@ -10,6 +10,7 @@ class Post {
   final DateTime timestamp;
   final List<String> likes;
   final List<Comment> comments;
+  final Map<String, dynamic>? additionalInfo;
 
   Post({
     required this.id,
@@ -21,6 +22,7 @@ class Post {
     required this.timestamp,
     required this.likes,
     required this.comments,
+    this.additionalInfo,
   });
 
   factory Post.fromFirestore(DocumentSnapshot doc) {
@@ -30,7 +32,7 @@ class Post {
     if (data['comments'] != null) {
       commentsList = List<Comment>.from(
         (data['comments'] as List).map(
-              (comment) => Comment.fromMap(comment),
+          (comment) => Comment.fromMap(comment),
         ),
       );
     }
@@ -45,6 +47,7 @@ class Post {
       timestamp: (data['timestamp'] as Timestamp).toDate(),
       likes: List<String>.from(data['likes'] ?? []),
       comments: commentsList,
+      additionalInfo: data['additionalInfo'],
     );
   }
 
@@ -58,6 +61,7 @@ class Post {
       'timestamp': Timestamp.fromDate(timestamp),
       'likes': likes,
       'comments': comments.map((comment) => comment.toMap()).toList(),
+      'additionalInfo': additionalInfo,
     };
   }
 }

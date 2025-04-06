@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/weekend_activity_model.dart';
+import '../models/user_model.dart';
+import '../models/user_model.dart';
 
 class WeekendActivityService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -231,5 +233,167 @@ class WeekendActivityService {
         'interestedUsers': updatedInterestedUsers,
       });
     });
+  }
+
+  // Get recommended weekend activities based on user interests and location
+  Future<List<WeekendActivity>> getRecommendedActivities(UserModel user,
+      {int limit = 10}) async {
+    // Get activities that match user's weekend interests
+    final interestQuery = await _activitiesCollection
+        .where('eventType',
+            whereIn: user.weekendInterests.isNotEmpty
+                ? user.weekendInterests
+                : ['Other'])
+        .where('date', isGreaterThanOrEqualTo: DateTime.now())
+        .orderBy('date', descending: false)
+        .limit(limit)
+        .get();
+
+    final List<WeekendActivity> recommendedActivities = interestQuery.docs
+        .map((doc) => WeekendActivity.fromFirestore(
+            doc as DocumentSnapshot<Map<String, dynamic>>, null))
+        .toList();
+
+    // If we have location data, add some nearby activities
+    if (user.location != null && recommendedActivities.length < limit) {
+      // Get the user's location
+      final userLocation = user.location!;
+
+      // Calculate bounds for a reasonable radius (approximately 50km)
+      const double radiusInDegrees = 0.5; // Rough approximation
+
+      final lowerLat = userLocation.latitude - radiusInDegrees;
+      final upperLat = userLocation.latitude + radiusInDegrees;
+      final lowerLng = userLocation.longitude - radiusInDegrees;
+      final upperLng = userLocation.longitude + radiusInDegrees;
+
+      final locationQuery = await _activitiesCollection
+          .where('locationCoordinates.latitude',
+              isGreaterThanOrEqualTo: lowerLat)
+          .where('locationCoordinates.latitude', isLessThanOrEqualTo: upperLat)
+          .where('date', isGreaterThanOrEqualTo: DateTime.now())
+          .orderBy('date', descending: false)
+          .limit(limit - recommendedActivities.length)
+          .get();
+
+      // Filter for longitude manually since Firestore can't query on multiple fields
+      final nearbyActivities = locationQuery.docs
+          .map((doc) => WeekendActivity.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>, null))
+          .where((activity) =>
+              activity.locationCoordinates != null &&
+              activity.locationCoordinates!.longitude >= lowerLng &&
+              activity.locationCoordinates!.longitude <= upperLng)
+          .toList();
+
+      // Add unique nearby activities to recommendations
+      for (final activity in nearbyActivities) {
+        if (!recommendedActivities.any((a) => a.id == activity.id)) {
+          recommendedActivities.add(activity);
+          if (recommendedActivities.length >= limit) break;
+        }
+      }
+    }
+
+    return recommendedActivities;
+  }
+
+  // Get activities by category/event type
+  Stream<List<WeekendActivity>> getActivitiesByCategory(String category) {
+    return _activitiesCollection
+        .where('eventType', isEqualTo: category)
+        .where('date', isGreaterThanOrEqualTo: DateTime.now())
+        .orderBy('date', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => WeekendActivity.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>, null))
+          .toList();
+    });
+  }
+
+  // Get popular activities (most attendees or interested users)
+  Stream<List<WeekendActivity>> getPopularActivities({int limit = 10}) {
+    return _activitiesCollection
+        .where('date', isGreaterThanOrEqualTo: DateTime.now())
+        .orderBy('date', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      final activities = snapshot.docs
+          .map((doc) => WeekendActivity.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>, null))
+          .toList();
+
+      // Sort by popularity (attendees + interested users)
+      activities.sort((a, b) {
+        final aPopularity = a.attendees.length + a.interestedUsers.length;
+        final bPopularity = b.attendees.length + b.interestedUsers.length;
+        return bPopularity.compareTo(aPopularity); // Descending order
+      });
+
+      return activities.take(limit).toList();
+    });
+  }
+
+  // Share activity with friends (creates a notification)
+  Future<void> shareActivityWithFriends(
+      String activityId, String senderId, List<String> friendIds) async {
+    final batch = _firestore.batch();
+    final activity = await getWeekendActivity(activityId);
+
+    if (activity == null) {
+      throw Exception('Activity does not exist');
+    }
+
+    // Create a notification for each friend
+    for (final friendId in friendIds) {
+      final notificationRef = _firestore.collection('notifications').doc();
+      batch.set(notificationRef, {
+        'userId': friendId,
+        'senderId': senderId,
+        'type': 'activity_share',
+        'activityId': activityId,
+        'activityTitle': activity.title,
+        'read': false,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  // Get activities that friends are attending
+  Future<List<WeekendActivity>> getFriendsActivities(List<String> friendIds,
+      {int limit = 10}) async {
+    if (friendIds.isEmpty) return [];
+
+    final List<WeekendActivity> friendsActivities = [];
+
+    // Get activities where friends are attendees
+    for (final friendId in friendIds) {
+      final query = await _activitiesCollection
+          .where('attendees', arrayContains: friendId)
+          .where('date', isGreaterThanOrEqualTo: DateTime.now())
+          .orderBy('date', descending: false)
+          .limit(limit)
+          .get();
+
+      final activities = query.docs
+          .map((doc) => WeekendActivity.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>, null))
+          .toList();
+
+      for (final activity in activities) {
+        if (!friendsActivities.any((a) => a.id == activity.id)) {
+          friendsActivities.add(activity);
+          if (friendsActivities.length >= limit) break;
+        }
+      }
+
+      if (friendsActivities.length >= limit) break;
+    }
+
+    return friendsActivities;
   }
 }

@@ -11,8 +11,8 @@ class CloudinaryService {
   CloudinaryService._internal();
 
   final _cloudinary = CloudinaryPublic(
-    'dpgrnxjay',  // Your Cloudinary cloud name
-    'Weekend Minlge',  // Your upload preset
+    'dpgrnxjay', // Your Cloudinary cloud name
+    'Weekend Minlge', // Your upload preset
   );
 
   final _cacheManager = DefaultCacheManager();
@@ -43,7 +43,29 @@ class CloudinaryService {
     }
   }
 
-  static Future<String?> uploadFile(File file, {String resourceType = 'auto'}) async {
+  static Future<String?> uploadVideo(File videoFile) async {
+    try {
+      final cloudinary = CloudinaryPublic(
+        cloudName,
+        uploadPreset,
+      );
+
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          videoFile.path,
+          resourceType: CloudinaryResourceType.Video,
+        ),
+      );
+
+      return response.secureUrl;
+    } catch (e) {
+      print('Error uploading video: $e');
+      return null;
+    }
+  }
+
+  static Future<String?> uploadFile(File file,
+      {String resourceType = 'auto'}) async {
     try {
       final url = Uri.parse(
           'https://api.cloudinary.com/v1_1/$cloudName/$resourceType/upload');
@@ -137,7 +159,8 @@ class CloudinaryService {
     }
   }
 
-  String getOptimizedImageUrl(String originalUrl, {
+  String getOptimizedImageUrl(
+    String originalUrl, {
     int? width,
     int? height,
     String? transformation,

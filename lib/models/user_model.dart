@@ -21,6 +21,8 @@ class UserModel {
   final List<String> friends;
   final List<String> pendingFriendRequests;
   final List<String> sentFriendRequests;
+  final List<String>? followers;
+  final List<String>? following;
   final String? linkedin;
   final String? github;
   final String? twitter;
@@ -47,31 +49,35 @@ class UserModel {
     List<String>? friends,
     List<String>? pendingFriendRequests,
     List<String>? sentFriendRequests,
+    List<String>? followers,
+    List<String>? following,
     this.linkedin,
     this.github,
     this.twitter,
     this.personalityAnswers,
-  }) : interests = interests ?? [],
+  })  : interests = interests ?? [],
         weekendInterests = weekendInterests ?? [],
         skills = skills ?? [],
-        availability = availability ?? {
-          'friday_evening': false,
-          'saturday_morning': false,
-          'saturday_afternoon': false,
-          'saturday_evening': false,
-          'sunday_morning': false,
-          'sunday_afternoon': false,
-          'sunday_evening': false,
-        },
+        availability = availability ??
+            {
+              'friday_evening': false,
+              'saturday_morning': false,
+              'saturday_afternoon': false,
+              'saturday_evening': false,
+              'sunday_morning': false,
+              'sunday_afternoon': false,
+              'sunday_evening': false,
+            },
         openToNetworking = openToNetworking ?? true,
         friends = friends ?? [],
         pendingFriendRequests = pendingFriendRequests ?? [],
-        sentFriendRequests = sentFriendRequests ?? [];
+        sentFriendRequests = sentFriendRequests ?? [],
+        followers = followers ?? [],
+        following = following ?? [];
 
   factory UserModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> snapshot,
-      [SnapshotOptions? options]
-      ) {
+      [SnapshotOptions? options]) {
     final data = snapshot.data()!;
     return UserModel(
       uid: snapshot.id,
@@ -80,20 +86,38 @@ class UserModel {
       profession: data['profession'] ?? '',
       photoUrl: data['photoUrl'],
       bio: data['bio'],
-      interests: (data['interests'] != null) ? List<String>.from(data['interests'] as List<dynamic>) : [],
+      interests: (data['interests'] != null)
+          ? List<String>.from(data['interests'] as List<dynamic>)
+          : [],
       location: data['location'],
       company: data['company'],
       locationName: data['locationName'],
       lastActive: (data['lastActive'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      weekendInterests: (data['weekendInterests'] != null) ? List<String>.from(data['weekendInterests'] as List<dynamic>) : [],
+      weekendInterests: (data['weekendInterests'] != null)
+          ? List<String>.from(data['weekendInterests'] as List<dynamic>)
+          : [],
       availability: Map<String, bool>.from(data['availability'] ?? {}),
       industry: data['industry'],
-      skills: (data['skills'] != null) ? List<String>.from(data['skills'] as List<dynamic>) : [],
+      skills: (data['skills'] != null)
+          ? List<String>.from(data['skills'] as List<dynamic>)
+          : [],
       openToNetworking: data['openToNetworking'] ?? true,
-      friends: (data['friends'] != null) ? List<String>.from(data['friends'] as List<dynamic>) : [],
-      pendingFriendRequests: (data['pendingFriendRequests'] != null) ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>) : [],
-      sentFriendRequests: (data['sentFriendRequests'] != null) ? List<String>.from(data['sentFriendRequests'] as List<dynamic>) : [],
+      friends: (data['friends'] != null)
+          ? List<String>.from(data['friends'] as List<dynamic>)
+          : [],
+      pendingFriendRequests: (data['pendingFriendRequests'] != null)
+          ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>)
+          : [],
+      sentFriendRequests: (data['sentFriendRequests'] != null)
+          ? List<String>.from(data['sentFriendRequests'] as List<dynamic>)
+          : [],
+      followers: (data['followers'] != null)
+          ? List<String>.from(data['followers'] as List<dynamic>)
+          : [],
+      following: (data['following'] != null)
+          ? List<String>.from(data['following'] as List<dynamic>)
+          : [],
       linkedin: data['linkedin'],
       github: data['github'],
       twitter: data['twitter'],
@@ -113,20 +137,38 @@ class UserModel {
       profession: data['profession'] ?? '',
       photoUrl: data['photoUrl'],
       bio: data['bio'],
-      interests: (data['interests'] != null) ? List<String>.from(data['interests'] as List<dynamic>) : [],
+      interests: (data['interests'] != null)
+          ? List<String>.from(data['interests'] as List<dynamic>)
+          : [],
       location: data['location'],
       company: data['company'],
       locationName: data['locationName'],
       lastActive: (data['lastActive'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      weekendInterests: (data['weekendInterests'] != null) ? List<String>.from(data['weekendInterests'] as List<dynamic>) : [],
+      weekendInterests: (data['weekendInterests'] != null)
+          ? List<String>.from(data['weekendInterests'] as List<dynamic>)
+          : [],
       availability: Map<String, bool>.from(data['availability'] ?? {}),
       industry: data['industry'],
-      skills: (data['skills'] != null) ? List<String>.from(data['skills'] as List<dynamic>) : [],
+      skills: (data['skills'] != null)
+          ? List<String>.from(data['skills'] as List<dynamic>)
+          : [],
       openToNetworking: data['openToNetworking'] ?? true,
-      friends: (data['friends'] != null) ? List<String>.from(data['friends'] as List<dynamic>) : [],
-      pendingFriendRequests: (data['pendingFriendRequests'] != null) ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>) : [],
-      sentFriendRequests: (data['sentFriendRequests'] != null) ? List<String>.from(data['sentFriendRequests'] as List<dynamic>) : [],
+      friends: (data['friends'] != null)
+          ? List<String>.from(data['friends'] as List<dynamic>)
+          : [],
+      pendingFriendRequests: (data['pendingFriendRequests'] != null)
+          ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>)
+          : [],
+      sentFriendRequests: (data['sentFriendRequests'] != null)
+          ? List<String>.from(data['sentFriendRequests'] as List<dynamic>)
+          : [],
+      followers: (data['followers'] != null)
+          ? List<String>.from(data['followers'] as List<dynamic>)
+          : [],
+      following: (data['following'] != null)
+          ? List<String>.from(data['following'] as List<dynamic>)
+          : [],
       linkedin: data['linkedin'],
       github: data['github'],
       twitter: data['twitter'],
@@ -144,30 +186,49 @@ class UserModel {
       profession: data['profession'] ?? '',
       photoUrl: data['photoUrl'],
       bio: data['bio'],
-      interests: (data['interests'] != null) ? List<String>.from(data['interests'] as List<dynamic>) : [],
+      interests: (data['interests'] != null)
+          ? List<String>.from(data['interests'] as List<dynamic>)
+          : [],
       location: data['location'],
       company: data['company'],
       locationName: data['locationName'],
       // Handle Timestamp or String for lastActive
       lastActive: data['lastActive'] != null
           ? data['lastActive'] is Timestamp
-          ? (data['lastActive'] as Timestamp).toDate()
-          : data['lastActive'] is String
-          ? DateTime.parse(data['lastActive'])
-          : null
+              ? (data['lastActive'] as Timestamp).toDate()
+              : data['lastActive'] is String
+                  ? DateTime.parse(data['lastActive'])
+                  : null
           : null,
       // Handle Timestamp or String for createdAt
       createdAt: data['createdAt'] is Timestamp
           ? (data['createdAt'] as Timestamp).toDate()
-          : DateTime.parse(data['createdAt'] ?? DateTime.now().toIso8601String()),
-      weekendInterests: (data['weekendInterests'] != null) ? List<String>.from(data['weekendInterests'] as List<dynamic>) : [],
+          : DateTime.parse(
+              data['createdAt'] ?? DateTime.now().toIso8601String()),
+      weekendInterests: (data['weekendInterests'] != null)
+          ? List<String>.from(data['weekendInterests'] as List<dynamic>)
+          : [],
       availability: Map<String, bool>.from(data['availability'] ?? {}),
       industry: data['industry'],
-      skills: (data['skills'] != null) ? List<String>.from(data['skills'] as List<dynamic>) : [],
+      skills: (data['skills'] != null)
+          ? List<String>.from(data['skills'] as List<dynamic>)
+          : [],
       openToNetworking: data['openToNetworking'] ?? true,
-      friends: (data['friends'] != null) ? List<String>.from(data['friends'] as List<dynamic>) : [],
-      pendingFriendRequests: (data['pendingFriendRequests'] != null) ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>) : [],
-      sentFriendRequests: (data['sentFriendRequests'] != null) ? List<String>.from(data['sentFriendRequests'] as List<dynamic>) : [],
+      friends: (data['friends'] != null)
+          ? List<String>.from(data['friends'] as List<dynamic>)
+          : [],
+      pendingFriendRequests: (data['pendingFriendRequests'] != null)
+          ? List<String>.from(data['pendingFriendRequests'] as List<dynamic>)
+          : [],
+      sentFriendRequests: (data['sentFriendRequests'] != null)
+          ? List<String>.from(data['sentFriendRequests'] as List<dynamic>)
+          : [],
+      followers: (data['followers'] != null)
+          ? List<String>.from(data['followers'] as List<dynamic>)
+          : [],
+      following: (data['following'] != null)
+          ? List<String>.from(data['following'] as List<dynamic>)
+          : [],
       linkedin: data['linkedin'],
       github: data['github'],
       twitter: data['twitter'],
@@ -275,7 +336,8 @@ class UserModel {
       skills: skills ?? this.skills,
       openToNetworking: openToNetworking ?? this.openToNetworking,
       friends: friends ?? this.friends,
-      pendingFriendRequests: pendingFriendRequests ?? this.pendingFriendRequests,
+      pendingFriendRequests:
+          pendingFriendRequests ?? this.pendingFriendRequests,
       sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
       linkedin: linkedin ?? this.linkedin,
       github: github ?? this.github,

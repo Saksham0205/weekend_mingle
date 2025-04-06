@@ -7,11 +7,13 @@ class Story {
   final String? userPhotoUrl;
   final String? mediaUrl;
   final String? text;
-  final String mediaType; // 'image', 'video', 'text'
+  final String mediaType; // 'image', 'video', 'text', 'reel'
   final DateTime createdAt;
-  final DateTime expiresAt; // 24 hours after creation
+  final DateTime
+      expiresAt; // 24 hours after creation for stories, 7 days for reels
   final List<String> viewers; // IDs of users who viewed the story
-  final Map<String, dynamic>? metadata; // Additional metadata
+  final Map<String, dynamic>?
+      metadata; // Additional metadata including likes, comments, hashtags
 
   Story({
     required this.id,
