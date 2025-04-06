@@ -287,7 +287,7 @@ class _ExploreTabState extends State<ExploreTab> {
                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: ResponsiveHelper.isTablet(context) ? 4 : 2,
+                      crossAxisCount: ResponsiveHelper.isTablet() ? 4 : 2,
                       crossAxisSpacing: ResponsiveHelper.getResponsiveWidth(8),
                       mainAxisSpacing: ResponsiveHelper.getResponsiveHeight(8),
                       children: [

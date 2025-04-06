@@ -1310,371 +1310,398 @@ class _HomeScreenState extends State<HomeScreen> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (_, controller) => Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  controller: controller,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        children: [
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Theme.of(context).primaryColor,
-                                  Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.8),
-                                ],
-                              ),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(20),
-                              ),
-                            ),
-                            child: user.photoUrl != null &&
-                                    user.photoUrl!.isNotEmpty &&
-                                    Uri.tryParse(user.photoUrl!)
-                                            ?.hasAbsolutePath ==
-                                        true
-                                ? ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(20),
+        builder: (context) =>
+            DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (_, controller) =>
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme
+                          .of(context)
+                          .scaffoldBackgroundColor,
+                      borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: Stack(
+                      children: [
+                        SingleChildScrollView(
+                          controller: controller,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Stack(
+                                children: [
+                                  Container(
+                                    height: 200,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Theme
+                                              .of(context)
+                                              .primaryColor,
+                                          Theme
+                                              .of(context)
+                                              .primaryColor
+                                              .withOpacity(0.8),
+                                        ],
+                                      ),
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(20),
+                                      ),
                                     ),
-                                    child: CachedNetworkImage(
-                                      imageUrl: user.photoUrl!,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (context, url, error) =>
-                                          Center(
-                                        child: Text(
-                                          user.name[0].toUpperCase(),
-                                          style: const TextStyle(
-                                            fontSize: 72,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
+                                    child: user.photoUrl != null &&
+                                        user.photoUrl!.isNotEmpty &&
+                                        Uri
+                                            .tryParse(user.photoUrl!)
+                                            ?.hasAbsolutePath ==
+                                            true
+                                        ? ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(20),
+                                      ),
+                                      child: CachedNetworkImage(
+                                        imageUrl: user.photoUrl!,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (context, url, error) =>
+                                            Center(
+                                              child: Text(
+                                                user.name[0].toUpperCase(),
+                                                style: const TextStyle(
+                                                  fontSize: 72,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                      ),
+                                    )
+                                        : Center(
+                                      child: Text(
+                                        user.name[0].toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 72,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      user.name[0].toUpperCase(),
-                                      style: const TextStyle(
-                                        fontSize: 72,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                                  ),
+                                  Positioned(
+                                    top: 16,
+                                    right: 16,
+                                    child: IconButton(
+                                      icon:
+                                      const Icon(
+                                          Icons.close, color: Colors.white),
+                                      onPressed: () => Navigator.pop(context),
                                     ),
                                   ),
-                          ),
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: IconButton(
-                              icon:
-                                  const Icon(Icons.close, color: Colors.white),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user.name,
-                                        style: const TextStyle(
-                                          fontSize: 24,
+                                ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment
+                                          .spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                user.name,
+                                                style: const TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                user.profession,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                              if (user.company != null) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  user.company!,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[500],
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        if (isFriend)
+                                          Row(
+                                            children: [
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          ChatScreen(
+                                                            otherUser: user,
+                                                            chatId:
+                                                            '${currentUser
+                                                                .uid}_${user
+                                                                .uid}',
+                                                            otherUserName: user
+                                                                .name,
+                                                          ),
+                                                    ),
+                                                  );
+                                                },
+                                                icon: const Icon(Icons.chat),
+                                                label: const Text('Message'),
+                                                style: ElevatedButton.styleFrom(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 20,
+                                                    vertical: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        else
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              _sendFriendRequest(
+                                                  context, currentUser.uid,
+                                                  user);
+                                              Navigator.pop(context);
+                                            },
+                                            icon: const Icon(Icons.person_add),
+                                            label: const Text('Connect'),
+                                            style: ElevatedButton.styleFrom(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                horizontal: 20,
+                                                vertical: 12,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    if (user.locationName != null) ...[
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.location_on,
+                                              size: 20,
+                                              color: Colors.grey[600]),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            user.locationName!,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                    if (user.bio != null &&
+                                        user.bio!.isNotEmpty) ...[
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'About',
+                                        style: TextStyle(
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 8),
                                       Text(
-                                        user.profession,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.grey[600],
+                                        user.bio!,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          height: 1.5,
                                         ),
                                       ),
-                                      if (user.company != null) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          user.company!,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
                                     ],
-                                  ),
-                                ),
-                                if (isFriend)
-                                  Row(
-                                    children: [
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ChatScreen(
-                                                otherUser: user,
-                                                chatId:
-                                                    '${currentUser.uid}_${user.uid}',
-                                                otherUserName: user.name,
-                                              ),
+                                    if (user.skills.isNotEmpty) ...[
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'Professional Skills',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: user.skills.map((skill) {
+                                          return Chip(
+                                            label: Text(skill),
+                                            backgroundColor: Theme
+                                                .of(context)
+                                                .primaryColor
+                                                .withOpacity(0.1),
+                                            labelStyle: TextStyle(
+                                              color: Theme
+                                                  .of(context)
+                                                  .primaryColor,
                                             ),
                                           );
-                                        },
-                                        icon: const Icon(Icons.chat),
-                                        label: const Text('Message'),
-                                        style: ElevatedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 12,
-                                          ),
-                                        ),
+                                        }).toList(),
                                       ),
                                     ],
-                                  )
-                                else
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      _sendFriendRequest(
-                                          context, currentUser.uid, user);
-                                      Navigator.pop(context);
-                                    },
-                                    icon: const Icon(Icons.person_add),
-                                    label: const Text('Connect'),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 12,
+                                    if (user.weekendInterests.isNotEmpty) ...[
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'Weekend Interests',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: user.weekendInterests.map((
+                                            interest) {
+                                          return Chip(
+                                            label: Text(interest),
+                                            backgroundColor:
+                                            Colors.purple.withOpacity(0.1),
+                                            labelStyle: const TextStyle(
+                                              color: Colors.purple,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 24),
+                                    const Text(
+                                      'Availability',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ),
-                            if (user.locationName != null) ...[
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on,
-                                      size: 20, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    user.locationName!,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            if (user.bio != null && user.bio!.isNotEmpty) ...[
-                              const SizedBox(height: 24),
-                              const Text(
-                                'About',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                user.bio!,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
-                            if (user.skills.isNotEmpty) ...[
-                              const SizedBox(height: 24),
-                              const Text(
-                                'Professional Skills',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: user.skills.map((skill) {
-                                  return Chip(
-                                    label: Text(skill),
-                                    backgroundColor: Theme.of(context)
-                                        .primaryColor
-                                        .withOpacity(0.1),
-                                    labelStyle: TextStyle(
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                            if (user.weekendInterests.isNotEmpty) ...[
-                              const SizedBox(height: 24),
-                              const Text(
-                                'Weekend Interests',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: user.weekendInterests.map((interest) {
-                                  return Chip(
-                                    label: Text(interest),
-                                    backgroundColor:
-                                        Colors.purple.withOpacity(0.1),
-                                    labelStyle: const TextStyle(
-                                      color: Colors.purple,
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Availability',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: user.availability.entries
-                                  .where((entry) => entry.value)
-                                  .map((entry) {
-                                final time = entry.key
-                                    .split('_')
-                                    .map(
-                                      (word) =>
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: user.availability.entries
+                                          .where((entry) => entry.value)
+                                          .map((entry) {
+                                        final time = entry.key
+                                            .split('_')
+                                            .map(
+                                              (word) =>
                                           word[0].toUpperCase() +
-                                          word.substring(1),
-                                    )
-                                    .join(' ');
-                                return Chip(
-                                  label: Text(time),
-                                  backgroundColor:
-                                      Colors.green.withOpacity(0.1),
-                                  labelStyle: const TextStyle(
-                                    color: Colors.green,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            if (user.linkedin != null ||
-                                user.github != null ||
-                                user.twitter != null) ...[
-                              const SizedBox(height: 24),
-                              const Text(
-                                'Social Links',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                              word.substring(1),
+                                        )
+                                            .join(' ');
+                                        return Chip(
+                                          label: Text(time),
+                                          backgroundColor:
+                                          Colors.green.withOpacity(0.1),
+                                          labelStyle: const TextStyle(
+                                            color: Colors.green,
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                    if (user.linkedin != null ||
+                                        user.github != null ||
+                                        user.twitter != null) ...[
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        'Social Links',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment
+                                            .start,
+                                        children: [
+                                          if (user.linkedin != null)
+                                            IconButton(
+                                              icon: const Icon(Icons.link),
+                                              onPressed: () {
+                                                // Handle LinkedIn link
+                                              },
+                                              tooltip: 'LinkedIn',
+                                            ),
+                                          if (user.github != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 16),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.code),
+                                                onPressed: () {
+                                                  // Handle GitHub link
+                                                },
+                                                tooltip: 'GitHub',
+                                              ),
+                                            ),
+                                          if (user.twitter != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 16),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.chat),
+                                                onPressed: () {
+                                                  // Handle Twitter link
+                                                },
+                                                tooltip: 'Twitter',
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  if (user.linkedin != null)
-                                    IconButton(
-                                      icon: const Icon(Icons.link),
-                                      onPressed: () {
-                                        // Handle LinkedIn link
-                                      },
-                                      tooltip: 'LinkedIn',
-                                    ),
-                                  if (user.github != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 16),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.code),
-                                        onPressed: () {
-                                          // Handle GitHub link
-                                        },
-                                        tooltip: 'GitHub',
-                                      ),
-                                    ),
-                                  if (user.twitter != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 16),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.chat),
-                                        onPressed: () {
-                                          // Handle Twitter link
-                                        },
-                                        tooltip: 'Twitter',
-                                      ),
-                                    ),
-                                ],
-                              ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 150,
-                      vertical: 8,
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 4,
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 150,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
                   ),
-                ),
-              ],
             ),
-          ),
-        ),
-      ),
+      );
+    }
     );
   }
 
