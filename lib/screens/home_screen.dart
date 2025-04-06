@@ -1280,11 +1280,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _getScreen() {
     switch (_currentIndex) {
       case 1:
-        return const FriendsTab();
-      case 2:
-        return const ChatsTab.ChatsTab();
-      case 3:
         return const ExploreTab();
+      case 2:
+        return const FriendsTab();
+      case 3:
+        return const ChatsTab.ChatsTab();
       case 4:
         return const ProfileTab();
       default:
@@ -2739,9 +2739,9 @@ class MessagesTab extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               itemCount: chats.length,
               itemBuilder: (context, index) {
-                final chat = chats[index].data();
+                final chat = chats[index];
                 final participants =
-                    List<String>.from(chat['participants'] ?? []);
+                    List<String>.from(chat.data()['participants'] ?? []);
                 final otherUserId = participants.firstWhere(
                     (id) => id != currentUser.uid,
                     orElse: () => '');
@@ -2763,11 +2763,12 @@ class MessagesTab extends StatelessWidget {
 
                     final otherUser =
                         UserModel.fromDocumentSnapshot(userSnapshot.data!);
-                    final lastMessage = chat['lastMessage'] as String?;
+                    final lastMessage = chat.data()['lastMessage'] as String?;
                     final lastMessageTime =
-                        chat['lastMessageTime'] as Timestamp?;
+                        chat.data()['lastMessageTime'] as Timestamp?;
                     final unreadCount =
-                        chat['unreadCount${currentUser.uid}'] as int? ?? 0;
+                        chat.data()['unreadCount${currentUser.uid}'] as int? ??
+                            0;
 
                     return Card(
                       margin: const EdgeInsets.symmetric(
