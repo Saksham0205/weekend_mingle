@@ -33,7 +33,7 @@ dependencies:
   badges: ^3.1.2
   geolocator: ^13.0.2
   http:
-  file_picker: ^9.1.0
+  file_picker: ^10.0.0
   emoji_picker_flutter: ^4.3.0
   firebase_messaging: ^15.2.4
   visibility_detector: ^0.4.0+2
@@ -58,7 +58,7 @@ dependencies:
   confetti: ^0.8.0
   shimmer: ^3.0.0
   google_fonts: ^6.1.0
-  record: ^5.2.1
+  record: ^6.0.0
   audioplayers: ^6.4.0
   path_provider: ^2.1.1
   permission_handler: ^11.0.1
