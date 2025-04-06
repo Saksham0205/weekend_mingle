@@ -21,6 +21,7 @@ import '../services/chat_service.dart';
 import '../services/cloudinary_services.dart';
 import '../services/notification_service.dart';
 import '../services/user_service.dart';
+import '../utils/responsive_helper.dart';
 
 class ChatScreen extends StatefulWidget {
   final UserModel? otherUser;
@@ -1147,7 +1148,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           : Colors.grey[100],
                       child: Container(
                         constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.65,
+                          maxWidth: ResponsiveHelper.getResponsiveWidth(250),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1157,6 +1158,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               Text(
                                 message['text'] as String,
                                 style: TextStyle(
+                                  fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                                   color: isCurrentUser
                                       ? Colors.white
                                       : Colors.black87,
@@ -1249,6 +1251,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                         Text(
                                           'Voice Message',
                                           style: TextStyle(
+                                            fontSize: ResponsiveHelper.getResponsiveFontSize(12),
                                             color: isCurrentUser
                                                 ? Colors.white
                                                 : Colors.black87,
@@ -1280,7 +1283,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                               ? '${_currentPosition.inMinutes}:${(_currentPosition.inSeconds % 60).toString().padLeft(2, '0')}'
                                               : '${message['voiceDuration'] ?? 0} sec',
                                            style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: ResponsiveHelper.getResponsiveFontSize(10),
                                             color: isCurrentUser
                                                 ? Colors.white.withOpacity(0.7)
                                                 : Colors.grey[600],
@@ -1340,6 +1343,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    ResponsiveHelper.init(context);
     final currentUser = _authService.currentUser;
     if (currentUser == null) {
       return const Scaffold(
@@ -1364,7 +1368,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             Hero(
               tag: 'chat-${_otherUser?.uid ?? widget.chatId}',
               child: CircleAvatar(
-                radius: 20,
+                radius: ResponsiveHelper.getResponsiveWidth(20),
                 backgroundColor:
                 Theme.of(context).primaryColor.withOpacity(0.1),
                 backgroundImage: _otherUser?.photoUrl != null &&
@@ -1379,7 +1383,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ? widget.otherUserName[0].toUpperCase()
                       : '?',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(20),
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).primaryColor,
                   ),
@@ -1387,7 +1391,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     : null,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: ResponsiveHelper.getResponsiveWidth(12)),
             Expanded(
               child: GestureDetector(
                 onTap: () {
@@ -1398,10 +1402,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   children: [
                     Text(
                       widget.otherUserName,
-                      style: const TextStyle(
-                        color: Colors.black87,
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(16),
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        color: Colors.black87,
                       ),
                     ),
                     StreamBuilder<DocumentSnapshot>(
@@ -1424,7 +1428,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               ? 'typing...'
                               : (widget.otherUser?.profession ?? 'Unknown'),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(12),
                             color: isTyping
                                 ? Theme.of(context).primaryColor
                                 : Colors.grey,
@@ -1440,13 +1444,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.videocam, color: Colors.black87),
+            icon: Icon(
+              Icons.videocam,
+              size: ResponsiveHelper.getResponsiveWidth(24),
+              color: Colors.black87,
+            ),
             onPressed: () {
               // TODO: Implement video call
             },
           ),
           IconButton(
-            icon: const Icon(Icons.call, color: Colors.black87),
+            icon: Icon(
+              Icons.call,
+              size: ResponsiveHelper.getResponsiveWidth(24),
+              color: Colors.black87,
+            ),
             onPressed: () {
               // TODO: Implement voice call
             },
@@ -1523,14 +1535,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             children: [
               Icon(
                 Icons.lock_outline,
-                size: 64,
+                size: ResponsiveHelper.getResponsiveWidth(64),
                 color: Colors.grey[400],
               ),
               const SizedBox(height: 16),
               Text(
                 'Messaging not available',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: ResponsiveHelper.getResponsiveFontSize(18),
                   color: Colors.grey[600],
                   fontWeight: FontWeight.bold,
                 ),
@@ -1540,7 +1552,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 'You can only message users who have\naccepted your friend request.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                   color: Colors.grey[500],
                 ),
               ),
@@ -1560,14 +1572,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   children: [
                     Icon(
                       Icons.chat_bubble_outline,
-                      size: 64,
+                      size: ResponsiveHelper.getResponsiveWidth(64),
                       color: Colors.grey[400],
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'No messages yet',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(18),
                         color: Colors.grey[600],
                       ),
                     ),
@@ -1575,7 +1587,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     Text(
                       'Start the conversation with ${widget.otherUserName}!',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                         color: Colors.grey[500],
                       ),
                     ),
@@ -1585,7 +1597,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   : ListView.builder(
                 controller: _scrollController,
                 reverse: true,
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.symmetric(
+                  vertical: ResponsiveHelper.getResponsiveHeight(16),
+                ),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final message = _messages[index];
@@ -1630,7 +1644,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
             ),
             Container(
-              margin: const EdgeInsets.all(8),
+              margin: EdgeInsets.all(ResponsiveHelper.getResponsiveWidth(8)),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
@@ -1664,13 +1678,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: ResponsiveHelper.getResponsiveWidth(16),
+                          vertical: ResponsiveHelper.getResponsiveHeight(10),
                         ),
                         hintStyle: TextStyle(
+                          fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                           color: Colors.grey[500],
                         ),
+                      ),
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                       ),
                       textCapitalization:
                       TextCapitalization.sentences,
@@ -1692,7 +1710,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(width: 2),
                   Container(
-                    margin: const EdgeInsets.only(right: 4),
+                    margin: EdgeInsets.only(right: ResponsiveHelper.getResponsiveWidth(4)),
                     decoration: BoxDecoration(
                       color: Theme.of(context).primaryColor,
                       shape: BoxShape.circle,
@@ -1734,7 +1752,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
             if (_showEmoji)
               SizedBox(
-                height: 250,
+                height: ResponsiveHelper.getResponsiveHeight(250),
                 child: EmojiPicker(
                   onEmojiSelected: (category, emoji) {
                     _messageController.text =

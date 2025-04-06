@@ -25,6 +25,8 @@ import '../models/weekend_activity_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/stories_widget.dart';
 import 'weekend_activities_screen.dart';
+import '../utils/responsive_helper.dart';
+import '../utils/responsive_extensions.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -1173,6 +1175,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ResponsiveHelper.init(context);
     final userProvider = Provider.of<UserProvider>(context);
     return Scaffold(
       appBar: _buildAppBar(context, userProvider.user),
@@ -1182,44 +1185,40 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_showNotifications) _buildNotificationsOverlay(),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: BottomNavigationBar(
-            elevation: 0,
-            backgroundColor: Colors.white,
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            selectedItemColor: Theme.of(context).primaryColor,
-            unselectedItemColor: Colors.grey,
-            showUnselectedLabels: true,
-            type: BottomNavigationBarType.fixed,
-            items: [
-              _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0),
-              _buildNavItem(
-                  Icons.people_outline, Icons.people, 'Connections', 1),
-              _buildNavItem(
-                  Icons.chat_bubble_outline, Icons.chat_bubble, 'Chats', 2),
-              _buildNavItem(
-                  Icons.explore_outlined, Icons.explore, 'Explore', 3),
-              _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4),
-            ],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, size: ResponsiveHelper.getResponsiveWidth(24)),
+            label: 'Home',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore, size: ResponsiveHelper.getResponsiveWidth(24)),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people, size: ResponsiveHelper.getResponsiveWidth(24)),
+            label: 'Friends',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline, size: ResponsiveHelper.getResponsiveWidth(24)),
+            label: 'Chats',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, size: ResponsiveHelper.getResponsiveWidth(24)),
+            label: 'Profile',
+          ),
+        ],
       ),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
               onPressed: _showCreateWeekendPlanDialog,
-              child: const Icon(Icons.add),
+              child: Icon(Icons.add, size: ResponsiveHelper.getResponsiveWidth(24)),
             )
           : null,
     );
@@ -1649,8 +1648,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-      );
-    });
+      ),
+    );
   }
 
   void _showCreateWeekendPlanDialog() {
@@ -2758,11 +2757,13 @@ class MessagesTab extends StatelessWidget {
                             radius: 28,
                             backgroundColor:
                                 Theme.of(context).primaryColor.withOpacity(0.1),
-                            backgroundImage: otherUser.photoUrl != null &&
-                                    otherUser.photoUrl!.isNotEmpty
-                                ? CachedNetworkImageProvider(
-                                    otherUser.photoUrl!) as ImageProvider
-                                : null,
+                            backgroundImage:
+                                otherUser.photoUrl != null &&
+                                        otherUser.photoUrl!.isNotEmpty
+                                    ? CachedNetworkImageProvider(
+                                        otherUser.photoUrl!)
+                                    as ImageProvider
+                                    : null,
                             child: otherUser.photoUrl == null ||
                                     otherUser.photoUrl!.isEmpty
                                 ? Text(
@@ -2921,10 +2922,8 @@ class ProfileTab extends StatelessWidget {
                     child: CircleAvatar(
                       backgroundColor: Theme.of(context).primaryColor,
                       child: IconButton(
-                        icon: const Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                        ),
+                        icon:
+                            const Icon(Icons.edit, color: Colors.white),
                         onPressed: () {
                           Navigator.push(
                             context,

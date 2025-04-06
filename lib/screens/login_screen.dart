@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
+import '../utils/responsive_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -66,37 +67,53 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize responsive values
+    ResponsiveHelper.init(context);
+    
+    // Calculate responsive values
+    final logoHeight = ResponsiveHelper.getResponsiveHeight(120);
+    final verticalSpacing = ResponsiveHelper.getResponsiveHeight(24);
+    final largeVerticalSpacing = ResponsiveHelper.getResponsiveHeight(48);
+    final horizontalPadding = ResponsiveHelper.getResponsiveWidth(24);
+    final buttonHeight = ResponsiveHelper.getResponsiveHeight(56);
+    final borderRadius = ResponsiveHelper.getResponsiveWidth(12);
+    
+    // Responsive font sizes
+    final headingFontSize = ResponsiveHelper.getResponsiveFontSize(28);
+    final subheadingFontSize = ResponsiveHelper.getResponsiveFontSize(16);
+    final buttonFontSize = ResponsiveHelper.getResponsiveFontSize(16);
+    
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(horizontalPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 48),
+              SizedBox(height: largeVerticalSpacing),
               Image.asset(
                 'assets/logo.jpg',
-                height: 120,
+                height: logoHeight,
               ),
-              const SizedBox(height: 48),
-              const Text(
+              SizedBox(height: largeVerticalSpacing),
+              Text(
                 'Welcome Back!',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: headingFontSize,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
+              Text(
                 'Sign in to continue connecting with professionals',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: subheadingFontSize,
                   color: Colors.grey,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 48),
+              SizedBox(height: largeVerticalSpacing),
               Form(
                 key: _formKey,
                 child: Column(
@@ -108,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(borderRadius),
                         ),
                       ),
                       validator: (value) {
@@ -121,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(16)),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -129,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(borderRadius),
                         ),
                       ),
                       validator: (value) {
@@ -145,56 +162,70 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _signInWithEmailAndPassword,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              SizedBox(height: verticalSpacing),
+              SizedBox(
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _signInWithEmailAndPassword,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : Text(
+                    'Sign In',
+                    style: TextStyle(fontSize: buttonFontSize),
                   ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text(
-                  'Sign In',
-                  style: TextStyle(fontSize: 16),
-                ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: _isLoading ? null : _signInWithGoogle,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              SizedBox(height: ResponsiveHelper.getResponsiveHeight(16)),
+              SizedBox(
+                height: buttonHeight,
+                child: OutlinedButton(
+                  onPressed: _isLoading ? null : _signInWithGoogle,
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/google_logo.svg',
+                        height: ResponsiveHelper.getResponsiveHeight(24),
+                      ),
+                      SizedBox(width: ResponsiveHelper.getResponsiveWidth(8)),
+                      Text(
+                        'Sign in with Google',
+                        style: TextStyle(fontSize: buttonFontSize),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/google_logo.svg',
-                      height: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Sign in with Google',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ],
-                ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: verticalSpacing),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account?"),
+                  Text(
+                    "Don't have an account?",
+                    style: TextStyle(
+                      fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                    ),
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pushNamed('/register');
                     },
-                    child: const Text('Sign Up'),
+                    child: Text(
+                      'Sign Up',
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                      ),
+                    ),
                   ),
                 ],
               ),

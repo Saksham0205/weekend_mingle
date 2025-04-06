@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geolocator/geolocator.dart';
+import '../utils/responsive_helper.dart';
 
 class ExploreTab extends StatefulWidget {
   const ExploreTab({super.key});
@@ -61,17 +62,18 @@ class _ExploreTabState extends State<ExploreTab> {
           // Navigate to category-specific screen
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(ResponsiveHelper.getResponsiveWidth(16)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 32),
-              const SizedBox(height: 8),
+              Icon(icon, size: ResponsiveHelper.getResponsiveWidth(32)),
+              SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
               Text(
                 category,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                 ),
               ),
             ],
@@ -94,7 +96,14 @@ class _ExploreTabState extends State<ExploreTab> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+              ),
+            ),
+          );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -108,23 +117,52 @@ class _ExploreTabState extends State<ExploreTab> {
           itemBuilder: (context, index) {
             final userData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.getResponsiveWidth(16),
+                vertical: ResponsiveHelper.getResponsiveHeight(8),
+              ),
               child: ListTile(
                 leading: CircleAvatar(
+                  radius: ResponsiveHelper.getResponsiveWidth(20),
                   backgroundImage: userData['photoUrl'] != null
                       ? CachedNetworkImageProvider(userData['photoUrl'])
                       : null,
                   child: userData['photoUrl'] == null
-                      ? const Icon(Icons.person)
+                      ? Icon(
+                          Icons.person,
+                          size: ResponsiveHelper.getResponsiveWidth(20),
+                        )
                       : null,
                 ),
-                title: Text(userData['name'] ?? 'Anonymous'),
-                subtitle: Text(userData['profession'] ?? 'No profession listed'),
+                title: Text(
+                  userData['name'] ?? 'Anonymous',
+                  style: TextStyle(
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  userData['profession'] ?? 'No profession listed',
+                  style: TextStyle(
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                  ),
+                ),
                 trailing: ElevatedButton(
                   onPressed: () {
                     // Navigate to profile or connect
                   },
-                  child: const Text('Connect'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveHelper.getResponsiveWidth(12),
+                      vertical: ResponsiveHelper.getResponsiveHeight(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Connect',
+                    style: TextStyle(
+                      fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                    ),
+                  ),
                 ),
               ),
             );
@@ -143,7 +181,14 @@ class _ExploreTabState extends State<ExploreTab> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: TextStyle(
+                fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+              ),
+            ),
+          );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -151,17 +196,17 @@ class _ExploreTabState extends State<ExploreTab> {
         }
 
         return SizedBox(
-          height: 200,
+          height: ResponsiveHelper.getResponsiveHeight(200),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               final eventData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               return Card(
-                margin: const EdgeInsets.all(8),
+                margin: EdgeInsets.all(ResponsiveHelper.getResponsiveWidth(8)),
                 child: Container(
-                  width: 200,
-                  padding: const EdgeInsets.all(8),
+                  width: ResponsiveHelper.getResponsiveWidth(200),
+                  padding: EdgeInsets.all(ResponsiveHelper.getResponsiveWidth(8)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -172,15 +217,19 @@ class _ExploreTabState extends State<ExploreTab> {
                             fit: BoxFit.cover,
                           ),
                         ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
                       Text(
                         eventData['name'] ?? 'Unnamed Event',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
+                          fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                         ),
                       ),
                       Text(
                         eventData['description'] ?? 'No description',
+                        style: TextStyle(
+                          fontSize: ResponsiveHelper.getResponsiveFontSize(12),
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -197,84 +246,81 @@ class _ExploreTabState extends State<ExploreTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize responsive helper
+    ResponsiveHelper.init(context);
+    
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
+          setState(() {
+            _isLoading = true;
+          });
           await _getCurrentLocation();
           await _loadUserInterests();
+          setState(() {
+            _isLoading = false;
+          });
         },
-        child: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Explore',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.all(ResponsiveHelper.getResponsiveWidth(16)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Explore',
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(24),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(16)),
+                    Text(
+                      'Categories',
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(18),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: ResponsiveHelper.isTablet(context) ? 4 : 2,
+                      crossAxisSpacing: ResponsiveHelper.getResponsiveWidth(8),
+                      mainAxisSpacing: ResponsiveHelper.getResponsiveHeight(8),
+                      children: [
+                        _buildCategoryCard('Networking Events', Icons.people),
+                        _buildCategoryCard('Workshops', Icons.school),
+                        _buildCategoryCard('Conferences', Icons.mic),
+                        _buildCategoryCard('Meetups', Icons.groups),
+                      ],
+                    ),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(24)),
+                    Text(
+                      'Professionals Near You',
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(18),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
+                    _buildNearbyProfessionals(),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(24)),
+                    Text(
+                      'Trending Events',
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(18),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
+                    _buildTrendingEvents(),
+                    SizedBox(height: ResponsiveHelper.getResponsiveHeight(24)),
+                  ],
                 ),
               ),
-            ),
-            // Categories Grid
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                children: [
-                  _buildCategoryCard('Networking', Icons.people),
-                  _buildCategoryCard('Events', Icons.event),
-                  _buildCategoryCard('Groups', Icons.group),
-                  _buildCategoryCard('Activities', Icons.local_activity),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Trending Events
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Trending Events',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // Navigate to all events
-                    },
-                    child: const Text('See All'),
-                  ),
-                ],
-              ),
-            ),
-            _buildTrendingEvents(),
-            const SizedBox(height: 24),
-            // Nearby Professionals
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Nearby Professionals',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // Navigate to all professionals
-                    },
-                    child: const Text('See All'),
-                  ),
-                ],
-              ),
-            ),
-            _buildNearbyProfessionals(),
-          ],
-        ),
       ),
     );
   }

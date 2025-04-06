@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../services/auth_service.dart';
+import '../utils/responsive_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -54,34 +54,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize responsive values
+    ResponsiveHelper.init(context);
+    
+    // Calculate responsive values
+    final horizontalPadding = ResponsiveHelper.getResponsiveWidth(24);
+    final verticalSpacing = ResponsiveHelper.getResponsiveHeight(16);
+    final largeVerticalSpacing = ResponsiveHelper.getResponsiveHeight(24);
+    final extraLargeVerticalSpacing = ResponsiveHelper.getResponsiveHeight(32);
+    final borderRadius = ResponsiveHelper.getResponsiveWidth(12);
+    final buttonHeight = ResponsiveHelper.getResponsiveHeight(56);
+    
+    // Responsive font sizes
+    final headingFontSize = ResponsiveHelper.getResponsiveFontSize(28);
+    final subheadingFontSize = ResponsiveHelper.getResponsiveFontSize(16);
+    final buttonFontSize = ResponsiveHelper.getResponsiveFontSize(16);
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: Text(
+          'Create Account',
+          style: TextStyle(
+            fontSize: ResponsiveHelper.getResponsiveFontSize(20),
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(horizontalPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Join Mingle',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: headingFontSize,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: ResponsiveHelper.getResponsiveHeight(8)),
+              Text(
                 'Connect with professionals and make meaningful connections',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: subheadingFontSize,
                   color: Colors.grey,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: extraLargeVerticalSpacing),
               Form(
                 key: _formKey,
                 child: Column(
@@ -92,7 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Full Name',
                         prefixIcon: const Icon(Icons.person_outline),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(borderRadius),
                         ),
                       ),
                       validator: (value) {
@@ -102,7 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: verticalSpacing),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -110,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(borderRadius),
                         ),
                       ),
                       validator: (value) {
@@ -123,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: verticalSpacing),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -131,7 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(borderRadius),
                         ),
                       ),
                       validator: (value) {
@@ -144,14 +165,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: verticalSpacing),
                     TextFormField(
                       controller: _professionController,
                       decoration: InputDecoration(
                         labelText: 'Profession',
                         prefixIcon: const Icon(Icons.work_outline),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(borderRadius),
                         ),
                       ),
                       validator: (value) {
@@ -164,32 +185,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _register,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              SizedBox(height: largeVerticalSpacing),
+              SizedBox(
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : Text(
+                    'Create Account',
+                    style: TextStyle(fontSize: buttonFontSize),
                   ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text(
-                  'Create Account',
-                  style: TextStyle(fontSize: 16),
-                ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: largeVerticalSpacing),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Already have an account?'),
+                  Text(
+                    'Already have an account?',
+                    style: TextStyle(
+                      fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                    ),
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
-                    child: const Text('Sign In'),
+                    child: Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                      ),
+                    ),
                   ),
                 ],
               ),

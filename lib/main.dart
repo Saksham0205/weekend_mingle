@@ -11,6 +11,7 @@ import 'providers/feed_provider.dart';
 import 'providers/notification_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/notification_service.dart';
+import 'utils/responsive_helper.dart';
 
 // Handle background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -70,6 +71,18 @@ class MyApp extends StatelessWidget {
             type: BottomNavigationBarType.fixed,
           ),
         ),
+        builder: (context, child) {
+          // Initialize ResponsiveHelper for the entire app
+          ResponsiveHelper.init(context);
+          
+          // Apply text scaling factor to ensure text is readable on all devices
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
+            ),
+            child: child!,
+          );
+        },
         initialRoute: '/',
         routes: {
           '/': (context) => const AuthWrapper(),
