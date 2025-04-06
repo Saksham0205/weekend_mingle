@@ -356,4 +356,54 @@ class SocialConnectionService {
       'activities': activitiesQuery.docs.length,
     };
   }
+
+  // Get a user's friends as a Future (for use with await)
+  Future<List<UserModel>> getUserFriends(String userId) async {
+    // Get the user document to access their friends list
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) return [];
+
+    final userData = UserModel.fromDocumentSnapshot(userDoc);
+    final friendIds = userData.friends;
+
+    if (friendIds.isEmpty) return [];
+
+    // Get user documents for all friends
+    try {
+      final friendDocs = await _firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: friendIds)
+          .get();
+
+      return friendDocs.docs
+          .map((doc) => UserModel.fromDocumentSnapshot(doc))
+          .toList();
+    } catch (e) {
+      // Handle the case where there might be too many friend IDs for a single query
+      if (e.toString().contains('maximum')) {
+        // If we have too many friends for a single query, split into batches
+        final List<UserModel> allFriends = [];
+
+        // Process in batches of 10
+        for (var i = 0; i < friendIds.length; i += 10) {
+          final end = (i + 10 < friendIds.length) ? i + 10 : friendIds.length;
+          final batch = friendIds.sublist(i, end);
+
+          final batchDocs = await _firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: batch)
+              .get();
+
+          allFriends.addAll(batchDocs.docs
+              .map((doc) => UserModel.fromDocumentSnapshot(doc))
+              .toList());
+        }
+
+        return allFriends;
+      }
+
+      // For other errors, return empty list
+      return [];
+    }
+  }
 }

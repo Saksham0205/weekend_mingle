@@ -417,4 +417,105 @@ class SocialWeekendActivityService {
     // Return limited feed
     return feed.take(limit).toList();
   }
+
+  // Show interest in an activity
+  Future<void> showInterestInActivity(String activityId, String userId) async {
+    final activityRef =
+        _firestore.collection('weekend_activities').doc(activityId);
+
+    // Get the activity document
+    final activityDoc = await activityRef.get();
+    if (!activityDoc.exists) {
+      throw Exception('Activity not found');
+    }
+
+    // Update the interestedUsers array to add the user
+    await activityRef.update({
+      'interestedUsers': FieldValue.arrayUnion([userId]),
+    });
+  }
+
+  // Remove interest in an activity
+  Future<void> removeInterestInActivity(
+      String activityId, String userId) async {
+    final activityRef =
+        _firestore.collection('weekend_activities').doc(activityId);
+
+    // Get the activity document
+    final activityDoc = await activityRef.get();
+    if (!activityDoc.exists) {
+      throw Exception('Activity not found');
+    }
+
+    // Update the interestedUsers array to remove the user
+    await activityRef.update({
+      'interestedUsers': FieldValue.arrayRemove([userId]),
+    });
+  }
+
+  // Share an activity with friends
+  Future<void> shareActivity(
+      String activityId, String userId, List<String> friendIds) async {
+    if (friendIds.isEmpty) return;
+
+    // Get the activity
+    final activity = await getWeekendActivityById(activityId);
+    if (activity == null) {
+      throw Exception('Activity not found');
+    }
+
+    // Get user data
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw Exception('User not found');
+    }
+    final userData = UserModel.fromDocumentSnapshot(userDoc);
+
+    // Create a batch to handle multiple operations
+    final batch = _firestore.batch();
+
+    // Create notifications for each friend
+    for (final friendId in friendIds) {
+      final notificationRef = _firestore.collection('notifications').doc();
+      batch.set(notificationRef, {
+        'userId': friendId,
+        'senderId': userId,
+        'senderName': userData.name,
+        'senderPhotoUrl': userData.photoUrl,
+        'type': 'activity_share',
+        'content':
+            '${userData.name} shared an activity with you: ${activity.title}',
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false,
+        'data': {
+          'activityId': activityId,
+          'activityTitle': activity.title,
+          'activityDate': activity.date,
+        },
+      });
+    }
+
+    // Execute the batch
+    await batch.commit();
+
+    // Optionally create a post about sharing the activity
+    final postContent =
+        'I just shared ${activity.title} with ${friendIds.length} friends!';
+    await _feedService.createActivityPost(
+      activityId: activityId,
+      content: postContent,
+    );
+  }
+
+  // Get a weekend activity by ID
+  Future<WeekendActivity?> getWeekendActivityById(String activityId) async {
+    try {
+      // Use the existing method from WeekendActivityService
+      return await _weekendActivityService.getWeekendActivity(activityId);
+    } catch (e) {
+      // Handle any errors
+      print('Error getting activity by ID: $e');
+      return null;
+    }
+  }
 }

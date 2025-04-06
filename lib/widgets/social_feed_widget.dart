@@ -305,7 +305,7 @@ class _SocialFeedWidgetState extends State<SocialFeedWidget> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Expanded(
-                        child: Text(post.comments.last.text),
+                        child: Text(post.comments.last.content),
                       ),
                     ],
                   ),
@@ -663,141 +663,33 @@ class _SocialFeedWidgetState extends State<SocialFeedWidget> {
     );
   }
 
-  void _showCommentSheet(Post post, UserModel currentUser) {
-    final TextEditingController commentController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Comments',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: post.comments.length,
-                  itemBuilder: (context, index) {
-                    final comment = post.comments[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: comment.userPhotoUrl != null
-                            ? CachedNetworkImageProvider(comment.userPhotoUrl!)
-                            : null,
-                        child: comment.userPhotoUrl == null
-                            ? const Icon(Icons.person)
-                            : null,
-                      ),
-                      title: Text(comment.userName),
-                      subtitle: Text(comment.content),
-                      trailing: Text(
-                        timeago.format(comment.timestamp),
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: commentController,
-                      decoration: const InputDecoration(
-                        hintText: 'Add a comment...',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 1,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: () async {
-                      if (commentController.text.trim().isEmpty) return;
-
-                      try {
-                        await _feedService.addComment(
-                          post.id,
-                          currentUser.uid,
-                          currentUser.name,
-                          currentUser.photoUrl,
-                          commentController.text.trim(),
-                        );
-
-                        // Clear input and refresh feed
-                        commentController.clear();
-                        Navigator.pop(context);
-                        _loadFeed();
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to comment: $e')),
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _handleLikePost(String postId, String userId) async {
     try {
       await _feedService.toggleLikePost(postId, userId);
-      _loadFeed();
+      _loadFeed(); // Refresh feed to show updated like status
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to like: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error liking post: $e')),
+        );
+      }
     }
   }
 
   Future<void> _handleSharePost(Post post, UserModel currentUser) async {
-    // Get user's friends for sharing
-    final friendIds = currentUser.friends;
+    // Get user's friends to share with
+    final friends =
+        await _socialConnectionService.getUserFriends(currentUser.uid);
 
-    if (friendIds.isEmpty) {
+    if (friends.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('You have no friends to share with')),
       );
       return;
     }
 
-    // Get friend user data
-    final friendDocs = await FirebaseFirestore.instance
-        .collection('users')
-        .where(FieldPath.documentId, whereIn: friendIds)
-        .get();
-
-    final friends = friendDocs.docs
-        .map((doc) => UserModel.fromDocumentSnapshot(doc))
-        .toList();
-
-    // Show friend selection dialog
+    // Show dialog to select friends
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) {
@@ -882,6 +774,241 @@ class _SocialFeedWidgetState extends State<SocialFeedWidget> {
     );
   }
 
+  void _showCommentSheet(Post post, UserModel currentUser) {
+    final TextEditingController commentController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Comments',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: post.comments.length,
+                  itemBuilder: (context, index) {
+                    final comment = post.comments[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: comment.userPhotoUrl != null
+                            ? CachedNetworkImageProvider(comment.userPhotoUrl!)
+                            : null,
+                        child: comment.userPhotoUrl == null
+                            ? const Icon(Icons.person)
+                            : null,
+                      ),
+                      title: Text(
+                        comment.userName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(comment.content),
+                      trailing: Text(
+                        timeago.format(comment.timestamp),
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: commentController,
+                      decoration: const InputDecoration(
+                        hintText: 'Add a comment...',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      minLines: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () async {
+                      final commentText = commentController.text.trim();
+                      if (commentText.isEmpty) return;
+
+                      try {
+                        await _feedService.addComment(
+                          post.id,
+                          currentUser.uid,
+                          currentUser.name,
+                          currentUser.photoUrl,
+                          commentText,
+                        );
+
+                        commentController.clear();
+                        _loadFeed(); // Refresh feed to show new comment
+                        Navigator.pop(context);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error adding comment: $e')),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleInterestActivity(WeekendActivity activity,
+      UserModel currentUser, bool isInterested) async {
+    try {
+      if (isInterested) {
+        // Remove interest
+        await _socialActivityService.removeInterestInActivity(
+            activity.id, currentUser.uid);
+      } else {
+        // Add interest
+        await _socialActivityService.showInterestInActivity(
+            activity.id, currentUser.uid);
+      }
+
+      // Refresh the feed to show updated state
+      _loadFeed();
+    } catch (e) {
+      // Handle any errors that occur during the interest process
+      setState(() {
+        _isError = true;
+        _errorMessage =
+            'Failed to ${isInterested ? "remove" : "show"} interest in activity: $e';
+      });
+
+      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $_errorMessage')),
+      );
+    }
+  }
+
+  Future<void> _handleShareActivity(
+      WeekendActivity activity, UserModel currentUser) async {
+    // Get user's friends to share with
+    final friends =
+        await _socialConnectionService.getUserFriends(currentUser.uid);
+
+    if (friends.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You have no friends to share with')),
+      );
+      return;
+    }
+
+    // Show dialog to select friends
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) {
+        List<String> selectedFriendIds = [];
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Share activity with friends'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: friends.length,
+                  itemBuilder: (context, index) {
+                    final friend = friends[index];
+                    final isSelected = selectedFriendIds.contains(friend.uid);
+
+                    return CheckboxListTile(
+                      value: isSelected,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == true) {
+                            selectedFriendIds.add(friend.uid);
+                          } else {
+                            selectedFriendIds.remove(friend.uid);
+                          }
+                        });
+                      },
+                      title: Text(friend.name),
+                      secondary: CircleAvatar(
+                        backgroundImage: friend.photoUrl != null
+                            ? CachedNetworkImageProvider(friend.photoUrl!)
+                            : null,
+                        child: friend.photoUrl == null
+                            ? const Icon(Icons.person)
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedFriendIds.isEmpty) {
+                      Navigator.pop(context);
+                      return;
+                    }
+
+                    try {
+                      await _socialActivityService.shareActivity(
+                        activity.id,
+                        currentUser.uid,
+                        selectedFriendIds,
+                      );
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Activity shared successfully!'),
+                        ),
+                      );
+                    } catch (e) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to share: $e')),
+                      );
+                    }
+                  },
+                  child: const Text('Share'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _navigateToStory(Story story) {
     // Navigate to story viewer
     Navigator.pushNamed(context, '/story_viewer', arguments: story.id);
@@ -914,5 +1041,77 @@ class _SocialFeedWidgetState extends State<SocialFeedWidget> {
         SnackBar(content: Text('Error: $_errorMessage')),
       );
     }
+  }
+
+  void _showSuggestedUsersDialog(
+      List<UserModel> suggestedUsers, String currentUserId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Suggested Users to Follow'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: suggestedUsers.length,
+            itemBuilder: (context, index) {
+              final user = suggestedUsers[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: user.photoUrl != null
+                      ? CachedNetworkImageProvider(user.photoUrl!)
+                      : null,
+                  child:
+                      user.photoUrl == null ? const Icon(Icons.person) : null,
+                ),
+                title: Text(user.name),
+                subtitle: Text(user.bio ?? ''),
+                trailing: ElevatedButton(
+                  onPressed: () {
+                    _socialConnectionService.followUser(
+                        currentUserId, user.uid);
+                    Navigator.of(context).pop();
+                    _loadFeed(); // Refresh feed after following
+                  },
+                  child: const Text('Follow'),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToProfile(String userId) {
+    // Navigate to user profile
+    Navigator.pushNamed(context, '/profile', arguments: userId);
+  }
+
+  void _navigateToActivity(String activityId) {
+    // Fetch the activity data first
+    _socialActivityService.getWeekendActivityById(activityId).then((activity) {
+      if (activity != null && mounted) {
+        // Navigate to the activity detail screen
+        Navigator.pushNamed(
+          context,
+          '/weekend_activity_detail',
+          arguments: activity,
+        );
+      }
+    }).catchError((error) {
+      // Show error if activity not found
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading activity: $error')),
+        );
+      }
+    });
   }
 }
