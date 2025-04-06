@@ -58,7 +58,7 @@ class WeekendActivityCard extends StatelessWidget {
     // Adjust image height based on screen size
     final imageHeight = isDetailView 
         ? screenHeight * 0.2  // 20% of screen height for detail view
-        : screenHeight * 0.12; // 12% of screen height for list view
+        : screenHeight * 0.15; // 15% of screen height for list view
         
     // Adjust text sizes based on screen width
     final titleFontSize = ResponsiveHelper.getResponsiveFontSize(isDetailView ? 18 : 16);
@@ -72,9 +72,6 @@ class WeekendActivityCard extends StatelessWidget {
     final verticalPadding = screenHeight * 0.01; // 1% of screen height
     final verticalSpacing = screenHeight * 0.008; // 0.8% of screen height
     final borderRadius = screenWidth * 0.03; // 3% of screen width
-    
-    // Determine if we should show certain elements based on available space
-    final bool isSmallScreen = screenWidth < 360 || screenHeight < 600;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -85,48 +82,57 @@ class WeekendActivityCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)),
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // Use minimum space needed
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image section with fixed aspect ratio
-            AspectRatio(
-              aspectRatio: 16 / 9, // Standard aspect ratio
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      image: activity.imageUrl != null
-                          ? DecorationImage(
-                              image: CachedNetworkImageProvider(activity.imageUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      gradient: activity.imageUrl == null
-                          ? LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Theme.of(context).primaryColor.withOpacity(0.7),
-                                Theme.of(context).primaryColor,
-                              ],
-                            )
-                          : null,
-                    ),
-                    child: activity.imageUrl == null
-                        ? Center(
-                            child: Icon(
-                              _getEventTypeIcon(activity.eventType),
-                              color: Colors.white,
-                              size: iconSize,
-                            ),
-                          )
-                        : null,
-                  ),
-                  Positioned(
-                    top: verticalPadding,
-                    right: horizontalPadding,
-                    child: Container(
+        child: SizedBox(
+          // Set a fixed height for the card based on screen size
+          height: isDetailView 
+              ? null // Let detail view expand as needed
+              : screenHeight * 0.35, // 35% of screen height for list view
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image section with fixed height
+              Container(
+                height: imageHeight,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: activity.imageUrl != null
+                      ? DecorationImage(
+                          image: CachedNetworkImageProvider(activity.imageUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                  gradient: activity.imageUrl == null
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Theme.of(context).primaryColor.withOpacity(0.7),
+                            Theme.of(context).primaryColor,
+                          ],
+                        )
+                      : null,
+                ),
+                child: activity.imageUrl == null
+                    ? Center(
+                        child: Icon(
+                          _getEventTypeIcon(activity.eventType),
+                          color: Colors.white,
+                          size: iconSize,
+                        ),
+                      )
+                    : null,
+              ),
+              
+              // Capacity indicator
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding / 2,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: horizontalPadding / 2,
                         vertical: verticalPadding / 2,
@@ -143,298 +149,301 @@ class WeekendActivityCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            
-            // Content section with adaptive sizing
-            Padding(
-              padding: EdgeInsets.all(horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // Use minimum space needed
-                children: [
-                  // Event type and price tags
-                  Row(
+              
+              // Content section - make it scrollable if needed
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: horizontalPadding / 2,
-                          vertical: verticalPadding / 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(borderRadius / 2),
-                        ),
-                        child: Text(
-                          activity.eventType,
-                          style: TextStyle(
-                            fontSize: smallFontSize,
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      if (activity.isPaid && !isSmallScreen)
-                        Container(
-                          margin: EdgeInsets.only(left: horizontalPadding / 2),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: horizontalPadding / 2,
-                            vertical: verticalPadding / 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(borderRadius / 2),
-                          ),
-                          child: Text(
-                            '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
-                            style: TextStyle(
-                              fontSize: smallFontSize,
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
+                      // Event type and price tags
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding / 2,
+                              vertical: verticalPadding / 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(borderRadius / 2),
+                            ),
+                            child: Text(
+                              activity.eventType,
+                              style: TextStyle(
+                                fontSize: smallFontSize,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: verticalSpacing),
-                  
-                  // Title with adaptive line count
-                  Text(
-                    activity.title,
-                    style: TextStyle(
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: isDetailView ? null : (isSmallScreen ? 1 : 2),
-                    overflow: isDetailView ? null : TextOverflow.ellipsis,
-                  ),
-                  
-                  // Description only in detail view
-                  if (isDetailView) ...[
-                    SizedBox(height: verticalSpacing),
-                    Text(
-                      activity.description,
-                      style: TextStyle(
-                        fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                          if (activity.isPaid)
+                            Container(
+                              margin: EdgeInsets.only(left: horizontalPadding / 2),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: horizontalPadding / 2,
+                                vertical: verticalPadding / 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(borderRadius / 2),
+                              ),
+                              child: Text(
+                                '\$${activity.price?.toStringAsFixed(2) ?? 'Paid'}',
+                                style: TextStyle(
+                                  fontSize: smallFontSize,
+                                  color: Colors.amber,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      maxLines: 3, // Limit lines for very long descriptions
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  SizedBox(height: verticalSpacing),
-                  
-                  // Date info with adaptive sizing
-                  if (!isSmallScreen || isDetailView)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: iconSize * 0.8,
-                          color: Colors.grey[600],
+                      SizedBox(height: verticalSpacing),
+                      
+                      // Title
+                      Text(
+                        activity.title,
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(width: horizontalPadding / 3),
+                        maxLines: isDetailView ? null : 2,
+                        overflow: isDetailView ? null : TextOverflow.ellipsis,
+                      ),
+                      
+                      // Description only in detail view
+                      if (isDetailView) ...[
+                        SizedBox(height: verticalSpacing),
                         Text(
-                          DateFormat('MMM dd, yyyy').format(activity.date),
+                          activity.description,
                           style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: smallFontSize,
+                            fontSize: ResponsiveHelper.getResponsiveFontSize(14),
                           ),
                         ),
                       ],
-                    ),
-                  
-                  // Time info - hide on very small screens if not detail view
-                  if (!isSmallScreen || isDetailView) ...[
-                    SizedBox(height: verticalSpacing / 2),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: iconSize * 0.8,
-                          color: Colors.grey[600],
-                        ),
-                        SizedBox(width: horizontalPadding / 3),
-                        Flexible(
-                          child: Text(
-                            '${DateFormat('h:mm a').format(activity.startTime)} - ${DateFormat('h:mm a').format(activity.endTime)}',
+                      SizedBox(height: verticalSpacing),
+                      
+                      // Date info
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: iconSize * 0.8,
+                            color: Colors.grey[600],
+                          ),
+                          SizedBox(width: horizontalPadding / 3),
+                          Text(
+                            DateFormat('MMM dd, yyyy').format(activity.date),
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: smallFontSize,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  
-                  // Location - always show but with ellipsis
-                  SizedBox(height: verticalSpacing / 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: iconSize * 0.8,
-                        color: Colors.grey[600],
+                        ],
                       ),
-                      SizedBox(width: horizontalPadding / 3),
-                      Expanded(
-                        child: Text(
-                          activity.location,
-                          style: TextStyle(
+                      
+                      // Time info
+                      SizedBox(height: verticalSpacing / 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: iconSize * 0.8,
                             color: Colors.grey[600],
-                            fontSize: smallFontSize,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          SizedBox(width: horizontalPadding / 3),
+                          Flexible(
+                            child: Text(
+                              '${DateFormat('h:mm a').format(activity.startTime)} - ${DateFormat('h:mm a').format(activity.endTime)}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: smallFontSize,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
+                      
+                      // Location
+                      SizedBox(height: verticalSpacing / 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: iconSize * 0.8,
+                            color: Colors.grey[600],
+                          ),
+                          SizedBox(width: horizontalPadding / 3),
+                          Expanded(
+                            child: Text(
+                              activity.location,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: smallFontSize,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      // Action buttons only in detail view
+                      if (isDetailView && currentUserId != null) ...[
+                        SizedBox(height: verticalSpacing * 2),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            if (!isCreator)
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: isAttending
+                                      ? () async {
+                                          try {
+                                            await _activityService
+                                                .leaveWeekendActivity(
+                                              activity.id,
+                                              currentUserId!,
+                                            );
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Left the activity'),
+                                                backgroundColor: Colors.orange,
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(e.toString()),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      : () async {
+                                          try {
+                                            await _activityService
+                                                .joinWeekendActivity(
+                                              activity.id,
+                                              currentUserId!,
+                                            );
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content:
+                                                    Text('Joined the activity!'),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(e.toString()),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        isAttending ? Colors.orange : null,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: verticalPadding,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isAttending ? 'Leave' : 'Join',
+                                    style: TextStyle(
+                                      fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (!isCreator) SizedBox(width: horizontalPadding / 2),
+                            if (!isCreator)
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () async {
+                                    try {
+                                      if (isInterested) {
+                                        await _activityService.removeInterest(
+                                          activity.id,
+                                          currentUserId!,
+                                        );
+                                      } else {
+                                        await _activityService.expressInterest(
+                                          activity.id,
+                                          currentUserId!,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(e.toString()),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        isInterested ? Colors.orange : null,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: verticalPadding,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isInterested ? 'Not Interested' : 'Interested',
+                                    style: TextStyle(
+                                      fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (isCreator)
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    // TODO: Implement edit functionality
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: verticalPadding,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Edit Activity',
+                                    style: TextStyle(
+                                      fontSize: ResponsiveHelper.getResponsiveFontSize(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        // Add padding at the bottom for detail view
+                        SizedBox(height: verticalPadding * 2),
+                      ],
                     ],
                   ),
-                  
-                  // Action buttons only in detail view
-                  if (isDetailView && currentUserId != null) ...[
-                    SizedBox(height: verticalSpacing * 2),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        if (!isCreator)
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: isAttending
-                                  ? () async {
-                                      try {
-                                        await _activityService
-                                            .leaveWeekendActivity(
-                                          activity.id,
-                                          currentUserId!,
-                                        );
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Left the activity'),
-                                            backgroundColor: Colors.orange,
-                                          ),
-                                        );
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(e.toString()),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  : () async {
-                                      try {
-                                        await _activityService
-                                            .joinWeekendActivity(
-                                          activity.id,
-                                          currentUserId!,
-                                        );
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content:
-                                                Text('Joined the activity!'),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(e.toString()),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    isAttending ? Colors.orange : null,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: verticalPadding,
-                                ),
-                              ),
-                              child: Text(
-                                isAttending ? 'Leave' : 'Join',
-                                style: TextStyle(
-                                  fontSize: ResponsiveHelper.getResponsiveFontSize(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (!isCreator) SizedBox(width: horizontalPadding / 2),
-                        if (!isCreator)
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () async {
-                                try {
-                                  if (isInterested) {
-                                    await _activityService.removeInterest(
-                                      activity.id,
-                                      currentUserId!,
-                                    );
-                                  } else {
-                                    await _activityService.expressInterest(
-                                      activity.id,
-                                      currentUserId!,
-                                    );
-                                  }
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(e.toString()),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor:
-                                    isInterested ? Colors.orange : null,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: verticalPadding,
-                                ),
-                              ),
-                              child: Text(
-                                isInterested ? 'Not Interested' : 'Interested',
-                                style: TextStyle(
-                                  fontSize: ResponsiveHelper.getResponsiveFontSize(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (isCreator)
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // TODO: Implement edit functionality
-                              },
-                              style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: verticalPadding,
-                                ),
-                              ),
-                              child: Text(
-                                'Edit Activity',
-                                style: TextStyle(
-                                  fontSize: ResponsiveHelper.getResponsiveFontSize(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
