@@ -321,7 +321,8 @@ class WeekendActivityCard extends StatelessWidget {
                           ],
                         ),
 
-                        // Action buttons (only if not in detail view)
+                        // Action buttons
+                        SizedBox(height: verticalSpacing),
                         if (!isDetailView) ...[
                           SizedBox(height: verticalSpacing),
                           Row(

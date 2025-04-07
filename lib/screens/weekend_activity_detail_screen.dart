@@ -63,6 +63,14 @@ class _WeekendActivityDetailScreenState
             return const Center(child: Text('Activity not found'));
           }
 
+          final currentUser = Provider.of<UserProvider>(context).user;
+          final String? currentUserId = currentUser?.uid;
+          final bool isCreator =
+              currentUserId != null && activity.creatorId == currentUserId;
+          final bool isAttending = currentUserId != null &&
+              activity.attendees.contains(currentUserId);
+          final bool isFull = activity.currentAttendees >= activity.capacity;
+
           return Column(
             children: [
               // Activity card
@@ -71,15 +79,83 @@ class _WeekendActivityDetailScreenState
                 child: SingleChildScrollView(
                   child: WeekendActivityCard(
                     activity: activity,
-                    currentUserId: Provider.of<UserProvider>(context).user?.uid,
+                    currentUserId: currentUserId,
                     isDetailView: true,
                   ),
                 ),
               ),
 
+              // Action buttons
+              if (currentUserId != null && !isCreator)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: Icon(isAttending ? Icons.check : Icons.add),
+                          label: Text(isAttending
+                              ? 'Attending'
+                              : (isFull ? 'Full' : 'Join Activity')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isAttending
+                                ? Theme.of(context).primaryColor
+                                : (isFull
+                                    ? Colors.grey
+                                    : Theme.of(context).primaryColor),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: isAttending || isFull
+                              ? (isAttending
+                                  ? () async {
+                                      try {
+                                        await _activityService
+                                            .leaveWeekendActivity(
+                                                activity.id, currentUserId);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'You left this activity')),
+                                        );
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text(
+                                                  'Error: ${e.toString()}')),
+                                        );
+                                      }
+                                    }
+                                  : null)
+                              : () async {
+                                  try {
+                                    await _activityService.joinWeekendActivity(
+                                        activity.id, currentUserId);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('You joined this activity')),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('Error: ${e.toString()}')),
+                                    );
+                                  }
+                                },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Attendees header
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
