@@ -12,6 +12,8 @@ import 'providers/notification_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/notification_service.dart';
 import 'utils/responsive_helper.dart';
+import 'utils/responsive_screen_util.dart';
+import 'examples/responsive_screen_example.dart';
 
 // Handle background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -72,13 +74,15 @@ class MyApp extends StatelessWidget {
           ),
         ),
         builder: (context, child) {
-          // Initialize ResponsiveHelper for the entire app
+          // Initialize all responsive systems for the entire app
           ResponsiveHelper.init(context);
-          
+          ResponsiveScreenUtil.init(context);
+
           // Apply text scaling factor to ensure text is readable on all devices
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(
-              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
+              textScaleFactor:
+                  MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
             ),
             child: child!,
           );
@@ -89,6 +93,7 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeScreen(),
+          '/responsive-example': (context) => const ResponsiveScreenExample(),
         },
       ),
     );
@@ -116,14 +121,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         if (!snapshot.hasData) {
           // Clear providers when user logs out
-          Provider.of<FeedProvider>(context, listen: false).initializeFeed(null);
-          Provider.of<NotificationProvider>(context, listen: false).initializeNotifications(null);
+          Provider.of<FeedProvider>(context, listen: false)
+              .initializeFeed(null);
+          Provider.of<NotificationProvider>(context, listen: false)
+              .initializeNotifications(null);
           return const LoginScreen();
         }
 
         // Initialize user data when auth state changes
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          final userProvider =
+              Provider.of<UserProvider>(context, listen: false);
           userProvider.initializeUser().then((_) {
             if (userProvider.user != null) {
               Provider.of<FeedProvider>(context, listen: false)
