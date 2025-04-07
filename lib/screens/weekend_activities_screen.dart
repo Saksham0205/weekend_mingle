@@ -55,14 +55,15 @@ class WeekendActivitiesScreen extends StatelessWidget {
 
           return Column(
             children: [
-              SizedBox(
+              // Horizontal scrolling activities with fixed height
+              Container(
                 height: 160,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: activities.length,
                   itemBuilder: (context, index) {
                     final activity = activities[index];
-                    return SizedBox(
+                    return Container(
                       width: 280,
                       child: WeekendActivityCard(
                         activity: activity,
@@ -91,6 +92,7 @@ class WeekendActivitiesScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              // Vertical scrolling activities list in an Expanded widget
               Expanded(
                 child: ListView.builder(
                   itemCount: activities.length,

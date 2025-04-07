@@ -66,10 +66,15 @@ class _WeekendActivityDetailScreenState
           return Column(
             children: [
               // Activity card
-              WeekendActivityCard(
-                activity: activity,
-                currentUserId: Provider.of<UserProvider>(context).user?.uid,
-                isDetailView: true,
+              Expanded(
+                flex: 1,
+                child: SingleChildScrollView(
+                  child: WeekendActivityCard(
+                    activity: activity,
+                    currentUserId: Provider.of<UserProvider>(context).user?.uid,
+                    isDetailView: true,
+                  ),
+                ),
               ),
 
               // Attendees header
@@ -80,10 +85,12 @@ class _WeekendActivityDetailScreenState
                   children: [
                     const Text(
                       'Attendees',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Theme.of(context).primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
@@ -102,6 +109,7 @@ class _WeekendActivityDetailScreenState
 
               // Attendees list - wrapped in Expanded
               Expanded(
+                flex: 2,
                 child: StreamBuilder<List<UserModel>>(
                   stream: _attendeesStream,
                   builder: (context, snapshot) {
@@ -129,7 +137,8 @@ class _WeekendActivityDetailScreenState
                       itemBuilder: (context, index) {
                         final attendee = attendees[index];
                         return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 4),
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundImage: attendee.photoUrl != null
@@ -141,22 +150,23 @@ class _WeekendActivityDetailScreenState
                             ),
                             title: Text(
                               attendee.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(
                                 attendee.profession ?? 'No profession listed'),
                             trailing: attendee.uid == activity.creatorId
                                 ? Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .primaryColor
-                                    .withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text('Creator'),
-                            )
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text('Creator'),
+                                  )
                                 : null,
                           ),
                         );
