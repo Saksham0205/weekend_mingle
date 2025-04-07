@@ -5,12 +5,17 @@ import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/create_story_screen.dart';
+import 'screens/video_call_screen.dart';
+import 'screens/voice_call_screen.dart';
+import 'screens/chat_search_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/feed_provider.dart';
 import 'providers/notification_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/notification_service.dart';
+import 'services/call_service.dart';
 import 'utils/responsive_helper.dart';
 import 'utils/responsive_screen_util.dart';
 import 'examples/responsive_screen_example.dart';
@@ -94,6 +99,7 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeScreen(),
           '/responsive-example': (context) => const ResponsiveScreenExample(),
+          '/create_story': (context) => const CreateStoryScreen(),
         },
       ),
     );
