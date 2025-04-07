@@ -232,7 +232,11 @@ class WeekendActivityCard extends StatelessWidget {
                         // Description only in detail view
                         if (isDetailView) ...[
                           SizedBox(height: verticalSpacing),
-                          Expanded(
+                          Container(
+                            constraints: BoxConstraints(
+                              maxHeight: screenHeight *
+                                  0.15, // Limit height to prevent layout issues
+                            ),
                             child: SingleChildScrollView(
                               child: Text(
                                 activity.description,
