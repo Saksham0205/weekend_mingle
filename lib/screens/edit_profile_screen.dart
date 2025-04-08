@@ -19,7 +19,8 @@ class EditProfileScreen extends StatefulWidget {
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> with SingleTickerProviderStateMixin {
+class _EditProfileScreenState extends State<EditProfileScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
@@ -36,18 +37,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
   List<String> _selectedSkills = [];
   List<String> _selectedWeekendInterests = [];
   Map<String, bool> _availability = {
-    'weekday_morning_early': false,    // 6-9 AM
-    'weekday_morning_late': false,     // 9-12 PM
-    'weekday_afternoon_early': false,  // 12-3 PM
-    'weekday_afternoon_late': false,   // 3-6 PM
-    'weekday_evening_early': false,    // 6-9 PM
-    'weekday_evening_late': false,     // 9-12 AM
-    'weekend_morning_early': false,    // 6-9 AM
-    'weekend_morning_late': false,     // 9-12 PM
-    'weekend_afternoon_early': false,  // 12-3 PM
-    'weekend_afternoon_late': false,   // 3-6 PM
-    'weekend_evening_early': false,    // 6-9 PM
-    'weekend_evening_late': false,     // 9-12 AM
+    'weekday_morning_early': false, // 6-9 AM
+    'weekday_morning_late': false, // 9-12 PM
+    'weekday_afternoon_early': false, // 12-3 PM
+    'weekday_afternoon_late': false, // 3-6 PM
+    'weekday_evening_early': false, // 6-9 PM
+    'weekday_evening_late': false, // 9-12 AM
+    'weekend_morning_early': false, // 6-9 AM
+    'weekend_morning_late': false, // 9-12 PM
+    'weekend_afternoon_early': false, // 12-3 PM
+    'weekend_afternoon_late': false, // 3-6 PM
+    'weekend_evening_early': false, // 6-9 PM
+    'weekend_evening_late': false, // 9-12 AM
   };
 
   late TabController _tabController;
@@ -63,33 +64,64 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
     'learning_style': '',
   };
 
-  final List<String> _personalityTypes = [
-    'Introvert', 'Extrovert', 'Ambivert'
-  ];
+  final List<String> _personalityTypes = ['Introvert', 'Extrovert', 'Ambivert'];
 
   final List<String> _communicationStyles = [
-    'Direct', 'Diplomatic', 'Collaborative', 'Analytical'
+    'Direct',
+    'Diplomatic',
+    'Collaborative',
+    'Analytical'
   ];
 
   final List<String> _workStyles = [
-    'Structured', 'Flexible', 'Creative', 'Methodical'
+    'Structured',
+    'Flexible',
+    'Creative',
+    'Methodical'
   ];
 
   final List<String> _learningStyles = [
-    'Visual', 'Auditory', 'Reading/Writing', 'Kinesthetic'
+    'Visual',
+    'Auditory',
+    'Reading/Writing',
+    'Kinesthetic'
   ];
 
   final List<String> _skillOptions = [
-    'Flutter', 'React', 'Node.js', 'Python', 'Java', 'Product Management',
-    'UI/UX Design', 'Data Science', 'DevOps', 'Cloud Computing',
-    'Machine Learning', 'Digital Marketing', 'Project Management',
-    'Business Development', 'Sales', 'Content Writing'
+    'Flutter',
+    'React',
+    'Node.js',
+    'Python',
+    'Java',
+    'Product Management',
+    'UI/UX Design',
+    'Data Science',
+    'DevOps',
+    'Cloud Computing',
+    'Machine Learning',
+    'Digital Marketing',
+    'Project Management',
+    'Business Development',
+    'Sales',
+    'Content Writing'
   ];
 
   final List<String> _weekendInterestOptions = [
-    'Coffee Meetups', 'Tech Talks', 'Sports', 'Hiking', 'Photography',
-    'Board Games', 'Movies', 'Music', 'Food Exploration', 'Networking Events',
-    'Book Club', 'Fitness', 'Art & Culture', 'Travel', 'Volunteering',
+    'Coffee Meetups',
+    'Tech Talks',
+    'Sports',
+    'Hiking',
+    'Photography',
+    'Board Games',
+    'Movies',
+    'Music',
+    'Food Exploration',
+    'Networking Events',
+    'Book Club',
+    'Fitness',
+    'Art & Culture',
+    'Travel',
+    'Volunteering',
     'Language Exchange'
   ];
 
@@ -169,23 +201,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
             children: [
               // Top gradient bar
               Container(
-                height: 120,
+                height: 160,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
+                      Theme.of(context).primaryColor.withOpacity(0.6),
                     ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: 16,
+                      top: 16,
+                      child: IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        onPressed: () {
+                          // Handle edit profile action
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // Profile section
               Transform.translate(
-                offset: const Offset(0, -60),
+                offset: const Offset(0, -80),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -209,28 +255,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
                             child: ClipOval(
                               child: _photoUrl != null
                                   ? CachedNetworkImage(
-                                imageUrl: _photoUrl!,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => const CircularProgressIndicator(),
-                                errorWidget: (context, url, error) => const Icon(Icons.error),
-                              )
-                                  : Icon(Icons.person, size: profileImageSize * 0.5),
+                                      imageUrl: _photoUrl!,
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) =>
+                                          const CircularProgressIndicator(),
+                                      errorWidget: (context, url, error) =>
+                                          const Icon(Icons.error),
+                                    )
+                                  : Icon(Icons.person,
+                                      size: profileImageSize * 0.5),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           // Name and profession
                           Text(
-                            _nameController.text.isEmpty ? 'Your Name' : _nameController.text,
+                            _nameController.text.isEmpty
+                                ? 'Your Name'
+                                : _nameController.text,
                             style: TextStyle(
                               fontSize: nameFontSize,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               color: Colors.black87,
+                              letterSpacing: 0.5,
                             ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _professionController.text.isEmpty ? 'Your Profession' : _professionController.text,
+                            _professionController.text.isEmpty
+                                ? 'Your Profession'
+                                : _professionController.text,
                             style: TextStyle(
                               fontSize: professionFontSize,
                               color: Colors.grey[600],
@@ -240,24 +294,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
                           const SizedBox(height: 16),
                           // Profile completion indicator
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            margin: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
                             decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 SizedBox(
-                                  width: 20,
-                                  height: 20,
+                                  width: 24,
+                                  height: 24,
                                   child: CircularProgressIndicator(
                                     value: _profileCompletion,
-                                    strokeWidth: 2,
+                                    strokeWidth: 3,
                                     backgroundColor: Colors.grey[300],
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      Theme.of(context).primaryColor,
-                                    ),
+                                        Theme.of(context).primaryColor),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -286,14 +348,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: IconButton(
-                            icon: Icon(Icons.camera_alt, color: Colors.white, size: isWideScreen ? 24 : 20),
+                            icon: Icon(Icons.camera_alt,
+                                color: Colors.white,
+                                size: isWideScreen ? 24 : 20),
                             onPressed: _pickImage,
                           ),
                         ),
@@ -318,31 +384,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
         _buildQuizQuestion(
           'What\'s your personality type?',
           _personalityTypes,
-              (value) => setState(() => _personalityAnswers['personality_type'] = value),
+          (value) =>
+              setState(() => _personalityAnswers['personality_type'] = value),
         ),
         const SizedBox(height: 16),
         _buildQuizQuestion(
           'What\'s your communication style?',
           _communicationStyles,
-              (value) => setState(() => _personalityAnswers['communication_style'] = value),
+          (value) => setState(
+              () => _personalityAnswers['communication_style'] = value),
         ),
         const SizedBox(height: 16),
         _buildQuizQuestion(
           'What\'s your work style?',
           _workStyles,
-              (value) => setState(() => _personalityAnswers['work_style'] = value),
+          (value) => setState(() => _personalityAnswers['work_style'] = value),
         ),
         const SizedBox(height: 16),
         _buildQuizQuestion(
           'What\'s your learning style?',
           _learningStyles,
-              (value) => setState(() => _personalityAnswers['learning_style'] = value),
+          (value) =>
+              setState(() => _personalityAnswers['learning_style'] = value),
         ),
       ],
     );
   }
 
-  Widget _buildQuizQuestion(String question, List<String> options, Function(String) onSelect) {
+  Widget _buildQuizQuestion(
+      String question, List<String> options, Function(String) onSelect) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -429,11 +499,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
   }
 
   Widget _buildSocialMediaField(
-      String label,
-      TextEditingController controller,
-      IconData icon,
-      Color color,
-      ) {
+    String label,
+    TextEditingController controller,
+    IconData icon,
+    Color color,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWideScreen = constraints.maxWidth > 600;
@@ -522,27 +592,83 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
                           maxLines: 3,
                         ),
                         const SizedBox(height: 16),
-                        _buildTextField(
-                          controller: _professionController,
-                          label: 'Profession',
-                          icon: Icons.work,
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Professional Information',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildTextField(
+                                controller: _professionController,
+                                label: 'Profession',
+                                icon: Icons.work,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _companyController,
+                                label: 'Company',
+                                icon: Icons.business,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _industryController,
+                                label: 'Industry',
+                                icon: Icons.category,
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          controller: _companyController,
-                          label: 'Company',
-                          icon: Icons.business,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          controller: _industryController,
-                          label: 'Industry',
-                          icon: Icons.category,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildLocationField(),
                         const SizedBox(height: 24),
-                        _buildSocialMediaSection(),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Location & Social',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildLocationField(),
+                              const SizedBox(height: 24),
+                              _buildSocialMediaSection(),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -586,7 +712,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
                   spacing: 8,
                   runSpacing: 8,
                   children: _weekendInterestOptions.map((interest) {
-                    final isSelected = _selectedWeekendInterests.contains(interest);
+                    final isSelected =
+                        _selectedWeekendInterests.contains(interest);
                     return FilterChip(
                       label: Text(interest),
                       selected: isSelected,
@@ -752,7 +879,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -815,12 +943,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
           _locationNameController.text = userData.locationName ?? '';
           _photoUrl = userData.photoUrl;
           _selectedSkills = List<String>.from(userData.skills ?? []);
-          _selectedWeekendInterests = List<String>.from(userData.weekendInterests ?? []);
+          _selectedWeekendInterests =
+              List<String>.from(userData.weekendInterests ?? []);
           _availability = Map<String, bool>.from(userData.availability ?? {});
           _linkedinController.text = userData.linkedin ?? '';
           _githubController.text = userData.github ?? '';
           _twitterController.text = userData.twitter ?? '';
-          _personalityAnswers = Map<String, String>.from(userData.personalityAnswers ?? {});
+          _personalityAnswers =
+              Map<String, String>.from(userData.personalityAnswers ?? {});
         });
       }
     } catch (e) {

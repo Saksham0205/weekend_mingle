@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import '../services/call_service.dart';
 import '../utils/responsive_helper.dart';
 
@@ -80,17 +81,17 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _listenForCallStatusChanges() {
-    // In a real implementation, you would listen to Agora events
-    // and Firestore call document changes
-
-    // For this implementation, we'll simulate the remote user joining after a delay
-    Future.delayed(const Duration(seconds: 2), () {
+    // Listen to Agora remote user events through our CallService
+    _callService.remoteUids.listen((uids) {
       if (mounted) {
         setState(() {
-          _remoteUserJoined = true;
+          _remoteUserJoined = uids.isNotEmpty;
         });
       }
     });
+
+    // Also listen to Firestore for call status changes
+    // This would be implemented to handle call ended/declined from the other side
   }
 
   void _toggleMute() {

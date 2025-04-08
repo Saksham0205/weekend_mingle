@@ -76,6 +76,8 @@ class ResponsiveContainer extends StatelessWidget {
     this.color,
     this.decoration,
     this.constrainToParentWidth = false,
+    required double width,
+    required double height,
   }) : super(key: key);
 
   @override

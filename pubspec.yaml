@@ -43,6 +43,7 @@ dependencies:
   video_player: ^2.9.5
   video_thumbnail: ^0.5.3
   timeago: ^3.7.0
+  agora_rtc_engine: ^6.2.6
 
 
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import '../services/call_service.dart';
 import '../utils/responsive_helper.dart';
 
@@ -34,6 +35,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   bool _isSpeakerOn = true;
   bool _isMinimized = false;
 
+  // Video views
+  Widget? _localView;
+  final Map<int, Widget> _remoteViews = <int, Widget>{};
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +52,15 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     // Initialize call based on whether it's outgoing or incoming
     if (widget.isOutgoing) {
       // For outgoing calls, we've already initialized the call before navigating to this screen
-      _localUserJoined = true;
+      setState(() {
+        _localUserJoined = true;
+      });
+
+      // Setup local video view
+      if (_callService.engine != null) {
+        _setupLocalView();
+      }
+
       // Listen for remote user to join
       _listenForCallStatusChanges();
     } else {
@@ -57,6 +70,12 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         setState(() {
           _localUserJoined = true;
         });
+
+        // Setup local video view
+        if (_callService.engine != null) {
+          _setupLocalView();
+        }
+
         // Listen for call status changes
         _listenForCallStatusChanges();
       } catch (e) {
@@ -69,17 +88,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   }
 
   void _listenForCallStatusChanges() {
-    // In a real implementation, you would listen to Agora events
-    // and Firestore call document changes
-
-    // For this implementation, we'll simulate the remote user joining after a delay
-    Future.delayed(const Duration(seconds: 2), () {
+    // Listen to Agora remote user events through our CallService
+    _callService.remoteUids.listen((uids) {
       if (mounted) {
         setState(() {
-          _remoteUserJoined = true;
+          _remoteUserJoined = uids.isNotEmpty;
+          _updateRemoteViews(uids);
         });
       }
     });
+
+    // Also listen to Firestore for call status changes
+    // This would be implemented to handle call ended/declined from the other side
   }
 
   void _toggleMute() {
@@ -138,14 +158,11 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     return Stack(
       children: [
         // Remote user's video (full screen)
-        _remoteUserJoined
+        _remoteUserJoined && _remoteViews.isNotEmpty
             ? Container(
                 color: Colors.black87,
-                child: const Center(
-                  child: Text(
-                    'Remote Video',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                child: Center(
+                  child: _remoteViews.values.first,
                 ),
               )
             : Container(
@@ -192,7 +209,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               ),
 
         // Local user's video (small overlay)
-        if (_localUserJoined)
+        if (_localUserJoined && _localView != null)
           Positioned(
             top: ResponsiveHelper.getResponsiveHeight(40),
             right: ResponsiveHelper.getResponsiveWidth(20),
@@ -202,10 +219,11 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 width: ResponsiveHelper.getResponsiveWidth(120),
                 height: ResponsiveHelper.getResponsiveHeight(160),
                 decoration: BoxDecoration(
-                  color: Colors.grey[900],
+                  color: _isCameraOff ? Colors.grey[900] : null,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white, width: 2),
                 ),
+                clipBehavior: Clip.hardEdge,
                 child: _isCameraOff
                     ? const Center(
                         child: Icon(
@@ -214,13 +232,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                           size: 40,
                         ),
                       )
-                    : const Center(
-                        child: Text(
-                          'Local Video',
-                          style: TextStyle(color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                    : _localView,
               ),
             ),
           ),
@@ -403,12 +415,40 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     );
   }
 
+  // Setup local video view
+  void _setupLocalView() {
+    setState(() {
+      _localView = AgoraVideoView(
+        controller: VideoViewController(
+          rtcEngine: _callService.engine!,
+          canvas: const VideoCanvas(uid: 0),
+        ),
+      );
+    });
+  }
+
+  // Update remote video views
+  void _updateRemoteViews(Set<int> uids) {
+    _remoteViews.clear();
+    for (final uid in uids) {
+      _remoteViews[uid] = AgoraVideoView(
+        controller: VideoViewController.remote(
+          rtcEngine: _callService.engine!,
+          canvas: VideoCanvas(uid: uid),
+          connection: RtcConnection(channelId: widget.channelName),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     // Clean up resources
     if (_localUserJoined) {
       _callService.endCall();
     }
+    _localView = null;
+    _remoteViews.clear();
     super.dispose();
   }
 }

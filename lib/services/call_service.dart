@@ -4,10 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-// This is a placeholder for Agora SDK implementation
-// In a real implementation, you would add:
-// import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 class CallService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,7 +12,18 @@ class CallService {
 
   // Agora App ID - you would need to get this from the Agora Console
   // For production, this should be stored securely and not hardcoded
-  static const String appId = 'YOUR_AGORA_APP_ID';
+  static const String appId =
+      'a1b2c3d4e5f6g7h8i9j0'; // Replace with your actual Agora App ID
+
+  // Agora engine instance
+  RtcEngine? _engine;
+  int? _localUid;
+  final Set<int> _remoteUids = <int>{};
+
+  // Stream controllers for call events
+  final StreamController<Set<int>> _remoteUidsController =
+      StreamController<Set<int>>.broadcast();
+  Stream<Set<int>> get remoteUids => _remoteUidsController.stream;
 
   // Singleton pattern
   static final CallService _instance = CallService._internal();
@@ -36,6 +44,7 @@ class CallService {
   bool get isMuted => _isMuted;
   bool get isCameraOff => _isCameraOff;
   bool get isSpeakerOn => _isSpeakerOn;
+  RtcEngine? get engine => _engine;
 
   // Request permissions for call
   Future<bool> requestPermissions(bool isVideoCall) async {
@@ -97,6 +106,9 @@ class CallService {
     // Save call to Firestore
     await callDoc.set(callData);
 
+    // Initialize Agora and join the channel
+    await _joinChannel(channelName, isVideoCall);
+
     // Update local state
     _isInCall = true;
     _currentCallId = callId;
@@ -119,6 +131,7 @@ class CallService {
 
     final callData = callDoc.data() as Map<String, dynamic>;
     final bool isVideoCall = callData['isVideoCall'] as bool;
+    final String channelName = callData['channelName'] as String;
 
     // Check permissions
     bool permissionsGranted = await requestPermissions(isVideoCall);
@@ -131,10 +144,13 @@ class CallService {
       'status': 'accepted',
     });
 
+    // Initialize Agora and join the channel
+    await _joinChannel(channelName, isVideoCall);
+
     // Update local state
     _isInCall = true;
     _currentCallId = callId;
-    _currentChannelName = callData['channelName'] as String;
+    _currentChannelName = channelName;
   }
 
   // End a call
@@ -146,6 +162,9 @@ class CallService {
       'status': 'ended',
       'endedAt': FieldValue.serverTimestamp(),
     });
+
+    // Leave the Agora channel
+    await _leaveChannel();
 
     // Reset local state
     _isInCall = false;
@@ -162,29 +181,111 @@ class CallService {
       'status': 'declined',
       'endedAt': FieldValue.serverTimestamp(),
     });
+
+    // If we're in this call, leave the channel
+    if (_currentCallId == callId) {
+      await _leaveChannel();
+      _isInCall = false;
+      _currentCallId = null;
+      _currentChannelName = null;
+    }
+  }
+
+  // Initialize Agora engine
+  Future<void> _initializeAgoraEngine() async {
+    if (_engine != null) return;
+
+    _engine = createAgoraRtcEngine();
+    await _engine!.initialize(RtcEngineContext(
+      appId: appId,
+      channelProfile: ChannelProfileType.channelProfileCommunication,
+    ));
+
+    // Register event handlers
+    _engine!.registerEventHandler(RtcEngineEventHandler(
+      onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+        debugPrint("Local user joined: ${connection.localUid}");
+        _localUid = connection.localUid;
+      },
+      onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+        debugPrint("Remote user joined: $remoteUid");
+        _remoteUids.add(remoteUid);
+        _remoteUidsController.add(_remoteUids);
+      },
+      onUserOffline: (RtcConnection connection, int remoteUid,
+          UserOfflineReasonType reason) {
+        debugPrint("Remote user left: $remoteUid");
+        _remoteUids.remove(remoteUid);
+        _remoteUidsController.add(_remoteUids);
+      },
+      onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
+        debugPrint(
+            '[onTokenPrivilegeWillExpire] connection: ${connection.toJson()}, token: $token');
+      },
+    ));
+  }
+
+  // Join a channel for video/voice call
+  Future<void> _joinChannel(String channelName, bool isVideoCall) async {
+    await _initializeAgoraEngine();
+
+    // Enable video if it's a video call
+    if (isVideoCall) {
+      await _engine!.enableVideo();
+      await _engine!.startPreview();
+    } else {
+      await _engine!.disableVideo();
+    }
+
+    // Set audio profile and scenario
+    await _engine!.setAudioProfile(
+      profile: AudioProfileType.audioProfileDefault,
+      scenario: AudioScenarioType.audioScenarioChatroom,
+    );
+
+    // Join the channel
+    await _engine!.joinChannel(
+      token: '', // Use token-based authentication in production
+      channelId: channelName,
+      uid: 0, // 0 means let the Agora server assign one
+      options: const ChannelMediaOptions(
+        channelProfile: ChannelProfileType.channelProfileCommunication,
+        clientRoleType: ClientRoleType.clientRoleBroadcaster,
+      ),
+    );
+  }
+
+  // Leave the channel
+  Future<void> _leaveChannel() async {
+    if (_engine != null) {
+      await _engine!.leaveChannel();
+      await _engine!.stopPreview();
+      _remoteUids.clear();
+      _remoteUidsController.add(_remoteUids);
+    }
   }
 
   // Toggle mute
   void toggleMute() {
     _isMuted = !_isMuted;
-    // In a real implementation, you would call the Agora SDK to mute/unmute
+    _engine?.muteLocalAudioStream(_isMuted);
   }
 
   // Toggle camera
   void toggleCamera() {
     _isCameraOff = !_isCameraOff;
-    // In a real implementation, you would call the Agora SDK to enable/disable camera
+    _engine?.muteLocalVideoStream(_isCameraOff);
   }
 
   // Toggle speaker
   void toggleSpeaker() {
     _isSpeakerOn = !_isSpeakerOn;
-    // In a real implementation, you would call the Agora SDK to switch speaker
+    _engine?.setEnableSpeakerphone(_isSpeakerOn);
   }
 
   // Switch camera (front/back)
   void switchCamera() {
-    // In a real implementation, you would call the Agora SDK to switch camera
+    _engine?.switchCamera();
   }
 
   // Get active calls for current user
@@ -194,15 +295,10 @@ class CallService {
 
     return _firestore
         .collection('calls')
+        .where('status', isEqualTo: 'ringing')
         .where(Filter.or(
-          Filter.and(
-            Filter.equalTo('callerId', user.uid),
-            Filter.equalTo('status', 'ringing'),
-          ),
-          Filter.and(
-            Filter.equalTo('recipientId', user.uid),
-            Filter.equalTo('status', 'ringing'),
-          ),
+          Filter('callerId', isEqualTo: user.uid),
+          Filter('recipientId', isEqualTo: user.uid),
         ))
         .snapshots()
         .map((snapshot) => snapshot.docs);
@@ -216,8 +312,8 @@ class CallService {
     final calls = await _firestore
         .collection('calls')
         .where(Filter.or(
-          Filter.equalTo('callerId', user.uid),
-          Filter.equalTo('recipientId', user.uid),
+          Filter('callerId', isEqualTo: user.uid),
+          Filter('recipientId', isEqualTo: user.uid),
         ))
         .orderBy('startedAt', descending: true)
         .limit(50)

@@ -1,26 +1,51 @@
 {
   "project_info": {
-    "project_number": "602865969086",
-    "project_id": "weekend-mingle",
-    "storage_bucket": "weekend-mingle.firebasestorage.app"
+    "project_number": "994388729420",
+    "project_id": "weekendmingle-cbe85",
+    "storage_bucket": "weekendmingle-cbe85.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:602865969086:android:6913afd6e96b9e655dfbef",
+        "mobilesdk_app_id": "1:994388729420:android:b9101ec9eddf822a035ee9",
         "android_client_info": {
-          "package_name": "com.example.weekend_mingle"
+          "package_name": "com.weekendmingle.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "994388729420-slo0sr4gbbanae220r1jl5dscr4mkf6b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.weekendmingle.app",
+            "certificate_hash": "9bb8b1aa2ca75915142f88f87f7251931b441b24"
+          }
+        },
+        {
+          "client_id": "994388729420-1849nd65380g25apk7anef93aj0nhcia.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCuQcxw6tUO1R3ZKVrbJfroR_gLSSoOQFk"
+          "current_key": "AIzaSyB94wSeI7o-y9WVykxHDlmpzrv0L3sZ8iM"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "994388729420-1849nd65380g25apk7anef93aj0nhcia.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "994388729420-i8be3ab9g5sq1ofklh83trn2c8dt0gir.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.weekendMingle"
+              }
+            }
+          ]
         }
       }
     }
