@@ -18,7 +18,6 @@ import 'services/notification_service.dart';
 import 'services/call_service.dart';
 import 'utils/responsive_helper.dart';
 import 'utils/responsive_screen_util.dart';
-import 'examples/responsive_screen_example.dart';
 
 // Handle background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -97,7 +96,6 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeScreen(),
-          '/responsive-example': (context) => const ResponsiveScreenExample(),
           '/create_story': (context) => const CreateStoryScreen(),
         },
       ),
