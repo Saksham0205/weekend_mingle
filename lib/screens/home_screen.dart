@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Provider.of<feed.FeedProvider>(context, listen: false)
             .initializeFeed(userProvider.user!.uid);
         Provider.of<app_notifications.NotificationProvider>(context,
-            listen: false)
+                listen: false)
             .initializeNotifications(userProvider.user!.uid);
       });
     }
@@ -142,18 +142,18 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundImage: currentUser?.photoUrl != null
                 ? NetworkImage(currentUser!.photoUrl!)
                 : const AssetImage('assets/images/default_profile.jpg')
-            as ImageProvider,
+                    as ImageProvider,
             radius: 15,
           ),
           onPressed: () {
             final userProvider =
-            Provider.of<UserProvider>(context, listen: false);
-            if (userProvider.user != null) {
+                Provider.of<UserProvider>(context, listen: false);
+            final currentUser = userProvider.user;
+            if (currentUser != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      EditProfileScreen(user: userProvider.user!),
+                  builder: (context) => EditProfileScreen(user: currentUser),
                 ),
               );
             }
@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               onPressed: () {
                 final userProvider =
-                Provider.of<UserProvider>(context, listen: false);
+                    Provider.of<UserProvider>(context, listen: false);
                 feedProvider.initializeFeed(userProvider.user?.uid);
               },
               child: const Text('Retry'),
@@ -214,24 +214,24 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildActiveUsersSection(),
           ...feedProvider.posts
               .map((feedPost) => _buildPostCard(Post(
-            id: feedPost.id,
-            userId: feedPost.userId,
-            userName: feedPost.userName,
-            userPhotoUrl: feedPost.userPhotoUrl,
-            content: feedPost.content,
-            imageUrl: feedPost.imageUrl,
-            timestamp: feedPost.timestamp,
-            likes: feedPost.likes,
-            comments: feedPost.comments
-                .map((comment) => Comment(
-              userId: comment.userId,
-              userName: comment.userName,
-              userPhotoUrl: comment.userPhotoUrl,
-              content: comment.content,
-              timestamp: comment.timestamp,
-            ))
-                .toList(),
-          )))
+                    id: feedPost.id,
+                    userId: feedPost.userId,
+                    userName: feedPost.userName,
+                    userPhotoUrl: feedPost.userPhotoUrl,
+                    content: feedPost.content,
+                    imageUrl: feedPost.imageUrl,
+                    timestamp: feedPost.timestamp,
+                    likes: feedPost.likes,
+                    comments: feedPost.comments
+                        .map((comment) => Comment(
+                              userId: comment.userId,
+                              userName: comment.userName,
+                              userPhotoUrl: comment.userPhotoUrl,
+                              content: comment.content,
+                              timestamp: comment.timestamp,
+                            ))
+                        .toList(),
+                  )))
               .toList(),
         ],
       ),
@@ -308,17 +308,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Colors.grey[200],
                   image: user.photoUrl != null && user.photoUrl!.isNotEmpty
                       ? DecorationImage(
-                    image: CachedNetworkImageProvider(user.photoUrl!),
-                    fit: BoxFit.cover,
-                  )
+                          image: CachedNetworkImageProvider(user.photoUrl!),
+                          fit: BoxFit.cover,
+                        )
                       : null,
                 ),
                 child: user.photoUrl == null || user.photoUrl!.isEmpty
                     ? Icon(
-                  Icons.person,
-                  size: 40,
-                  color: Colors.grey[400],
-                )
+                        Icons.person,
+                        size: 40,
+                        color: Colors.grey[400],
+                      )
                     : null,
               ),
               Positioned(
@@ -414,10 +414,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
         final sentRequests =
-        List<String>.from(userData['sentFriendRequests'] ?? []);
+            List<String>.from(userData['sentFriendRequests'] ?? []);
         final friends = List<String>.from(userData['friends'] ?? []);
         final pendingRequests =
-        List<String>.from(userData['pendingFriendRequests'] ?? []);
+            List<String>.from(userData['pendingFriendRequests'] ?? []);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   TextButton(
                     onPressed: () {
                       setState(
-                              () => _currentIndex = 1); // Switch to connections tab
+                          () => _currentIndex = 1); // Switch to connections tab
                     },
                     child: const Text('See All'),
                   ),
@@ -549,13 +549,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 : null,
             child: user.photoUrl == null || user.photoUrl!.isEmpty
                 ? Text(
-              user.name[0].toUpperCase(),
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-              ),
-            )
+                    user.name[0].toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  )
                 : null,
           ),
           const SizedBox(height: 12),
@@ -695,7 +695,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         try {
                           final data = doc.data() as Map<String, dynamic>;
                           final activity =
-                          WeekendActivity.fromMap(data, doc.id);
+                              WeekendActivity.fromMap(data, doc.id);
                           return _buildWeekendPlanCard(activity);
                         } catch (e) {
                           print('Error parsing weekend activity: $e');
@@ -754,19 +754,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       : null,
                   image: activity.imageUrl != null
                       ? DecorationImage(
-                    image: CachedNetworkImageProvider(activity.imageUrl!),
-                    fit: BoxFit.cover,
-                  )
+                          image: CachedNetworkImageProvider(activity.imageUrl!),
+                          fit: BoxFit.cover,
+                        )
                       : null,
                 ),
                 child: activity.imageUrl == null
                     ? Center(
-                  child: Icon(
-                    _getEventTypeIcon(activity.eventType),
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                )
+                        child: Icon(
+                          _getEventTypeIcon(activity.eventType),
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      )
                     : null,
               ),
 
@@ -819,7 +819,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             '${dateFormat.format(activity.date)} • ${timeFormat.format(activity.startTime)}',
                             style:
-                            TextStyle(fontSize: 9, color: Colors.grey[600]),
+                                TextStyle(fontSize: 9, color: Colors.grey[600]),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -838,7 +838,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             activity.location,
                             style:
-                            TextStyle(fontSize: 9, color: Colors.grey[600]),
+                                TextStyle(fontSize: 9, color: Colors.grey[600]),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1006,7 +1006,7 @@ class _HomeScreenState extends State<HomeScreen> {
               TextButton(
                 onPressed: () {
                   setState(
-                          () => _currentIndex = 1); // Switch to connections tab
+                      () => _currentIndex = 1); // Switch to connections tab
                 },
                 child: const Text('See All'),
               ),
@@ -1078,21 +1078,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor:
-                  Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withOpacity(0.1),
                   backgroundImage:
-                  user.photoUrl != null && user.photoUrl!.isNotEmpty
-                      ? CachedNetworkImageProvider(user.photoUrl!)
-                  as ImageProvider
-                      : null,
+                      user.photoUrl != null && user.photoUrl!.isNotEmpty
+                          ? CachedNetworkImageProvider(user.photoUrl!)
+                              as ImageProvider
+                          : null,
                   child: user.photoUrl == null || user.photoUrl!.isEmpty
                       ? Text(
-                    user.name[0].toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  )
+                          user.name[0].toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        )
                       : null,
                 ),
                 Positioned(
@@ -1174,7 +1174,7 @@ class _HomeScreenState extends State<HomeScreen> {
         items: [
           BottomNavigationBarItem(
             icon:
-            Icon(Icons.home, size: ResponsiveHelper.getResponsiveWidth(24)),
+                Icon(Icons.home, size: ResponsiveHelper.getResponsiveWidth(24)),
             label: 'Home',
           ),
           BottomNavigationBarItem(
@@ -1201,10 +1201,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
-        onPressed: _showCreateWeekendPlanDialog,
-        child: Icon(Icons.add,
-            size: ResponsiveHelper.getResponsiveWidth(24)),
-      )
+              onPressed: _showCreateWeekendPlanDialog,
+              child: Icon(Icons.add,
+                  size: ResponsiveHelper.getResponsiveWidth(24)),
+            )
           : null,
     );
   }
@@ -1245,7 +1245,12 @@ class _HomeScreenState extends State<HomeScreen> {
       case 3:
         return const ChatsTab.ChatsTab();
       case 4:
-        return const ProfileTab();
+        final userProvider = Provider.of<UserProvider>(context);
+        final user = userProvider.user;
+        if (user != null) {
+          return EditProfileScreen(user: user);
+        }
+        return const Center(child: Text('User not found'));
       default:
         return _buildMainFeed();
     }
@@ -1277,7 +1282,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
               borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(20)),
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Stack(
               children: [
@@ -1307,47 +1312,47 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             child: user.photoUrl != null &&
-                                user.photoUrl!.isNotEmpty &&
-                                Uri.tryParse(user.photoUrl!)
-                                    ?.hasAbsolutePath ==
-                                    true
+                                    user.photoUrl!.isNotEmpty &&
+                                    Uri.tryParse(user.photoUrl!)
+                                            ?.hasAbsolutePath ==
+                                        true
                                 ? ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(20),
-                              ),
-                              child: CachedNetworkImage(
-                                imageUrl: user.photoUrl!,
-                                fit: BoxFit.cover,
-                                errorWidget: (context, url, error) =>
-                                    Center(
-                                      child: Text(
-                                        user.name[0].toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 72,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(20),
+                                    ),
+                                    child: CachedNetworkImage(
+                                      imageUrl: user.photoUrl!,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (context, url, error) =>
+                                          Center(
+                                        child: Text(
+                                          user.name[0].toUpperCase(),
+                                          style: const TextStyle(
+                                            fontSize: 72,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
-                              ),
-                            )
+                                  )
                                 : Center(
-                              child: Text(
-                                user.name[0].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 72,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+                                    child: Text(
+                                      user.name[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 72,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                           ),
                           Positioned(
                             top: 16,
                             right: 16,
                             child: IconButton(
                               icon:
-                              const Icon(Icons.close, color: Colors.white),
+                                  const Icon(Icons.close, color: Colors.white),
                               onPressed: () => Navigator.pop(context),
                             ),
                           ),
@@ -1364,7 +1369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         user.name,
@@ -1405,7 +1410,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               builder: (context) => ChatScreen(
                                                 otherUser: user,
                                                 chatId:
-                                                '${currentUser.uid}_${user.uid}',
+                                                    '${currentUser.uid}_${user.uid}',
                                                 otherUserName: user.name,
                                               ),
                                             ),
@@ -1518,7 +1523,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   return Chip(
                                     label: Text(interest),
                                     backgroundColor:
-                                    Colors.purple.withOpacity(0.1),
+                                        Colors.purple.withOpacity(0.1),
                                     labelStyle: const TextStyle(
                                       color: Colors.purple,
                                     ),
@@ -1545,14 +1550,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                     .split('_')
                                     .map(
                                       (word) =>
-                                  word[0].toUpperCase() +
-                                      word.substring(1),
-                                )
+                                          word[0].toUpperCase() +
+                                          word.substring(1),
+                                    )
                                     .join(' ');
                                 return Chip(
                                   label: Text(time),
                                   backgroundColor:
-                                  Colors.green.withOpacity(0.1),
+                                      Colors.green.withOpacity(0.1),
                                   labelStyle: const TextStyle(
                                     color: Colors.green,
                                   ),
@@ -1854,13 +1859,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       spacing: 8,
                       children: _tags
                           .map((tag) => Chip(
-                        label: Text(tag),
-                        onDeleted: () {
-                          setState(() {
-                            _tags.remove(tag);
-                          });
-                        },
-                      ))
+                                label: Text(tag),
+                                onDeleted: () {
+                                  setState(() {
+                                    _tags.remove(tag);
+                                  });
+                                },
+                              ))
                           .toList(),
                     ),
                   const SizedBox(height: 12),
@@ -1948,7 +1953,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content:
-                                Text('Weekend plan created successfully!'),
+                                    Text('Weekend plan created successfully!'),
                                 backgroundColor: Colors.green,
                               ),
                             );
@@ -1958,7 +1963,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content:
-                                Text('Error creating weekend plan: $e'),
+                                    Text('Error creating weekend plan: $e'),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -1979,7 +1984,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNotificationsOverlay() {
     final notificationProvider =
-    Provider.of<app_notifications.NotificationProvider>(context);
+        Provider.of<app_notifications.NotificationProvider>(context);
     final notifications = notificationProvider.notifications;
 
     return Positioned(
@@ -2030,71 +2035,71 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: notifications.isEmpty
                       ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_off_outlined,
-                          size: 48,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No notifications yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                      : ListView.builder(
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = notifications[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage:
-                          null, // We don't have sender photo in our model
-                          child: const Icon(Icons.person),
-                        ),
-                        title: Text(notification.title),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(notification.message),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatMessageTime(
-                                  notification.timestamp as Timestamp?),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.notifications_off_outlined,
+                                size: 48,
+                                color: Colors.grey[400],
                               ),
-                            ),
-                          ],
-                        ),
-                        trailing: !notification.isRead
-                            ? Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            shape: BoxShape.circle,
+                              const SizedBox(height: 16),
+                              Text(
+                                'No notifications yet',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
                         )
-                            : null,
-                        onTap: () {
-                          // Mark as read
-                          notificationProvider
-                              .markAsRead(notification.id);
-                          // Handle notification tap based on type
-                          _handleNotificationTap(notification);
-                        },
-                      );
-                    },
-                  ),
+                      : ListView.builder(
+                          itemCount: notifications.length,
+                          itemBuilder: (context, index) {
+                            final notification = notifications[index];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage:
+                                    null, // We don't have sender photo in our model
+                                child: const Icon(Icons.person),
+                              ),
+                              title: Text(notification.title),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(notification.message),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatMessageTime(
+                                        notification.timestamp as Timestamp?),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: !notification.isRead
+                                  ? Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).primaryColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    )
+                                  : null,
+                              onTap: () {
+                                // Mark as read
+                                notificationProvider
+                                    .markAsRead(notification.id);
+                                // Handle notification tap based on type
+                                _handleNotificationTap(notification);
+                              },
+                            );
+                          },
+                        ),
                 ),
                 const Divider(height: 1),
                 // Footer
@@ -2145,7 +2150,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final currentUser =
                 Provider.of<UserProvider>(context, listen: false).user;
             final otherUserId =
-            userIds[0] == currentUser?.uid ? userIds[1] : userIds[0];
+                userIds[0] == currentUser?.uid ? userIds[1] : userIds[0];
 
             // Fetch user data
             FirebaseFirestore.instance
@@ -2172,7 +2177,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         break;
       case 'weekend_plan':
-      // Navigate to the specific weekend plan
+        // Navigate to the specific weekend plan
         if (notification.relatedId != null) {
           final planId = notification.relatedId!;
           Navigator.push(
@@ -2185,7 +2190,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         break;
       default:
-      // Default action is to go to the notifications screen
+        // Default action is to go to the notifications screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -2210,7 +2215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? CachedNetworkImageProvider(post.userPhotoUrl!)
                   : null,
               child:
-              post.userPhotoUrl == null ? const Icon(Icons.person) : null,
+                  post.userPhotoUrl == null ? const Icon(Icons.person) : null,
             ),
             title: Text(post.userName),
             subtitle: Text(timeago.format(post.timestamp)),
@@ -2442,21 +2447,21 @@ class _AnimatedCardState extends State<AnimatedCard>
                         child: CircleAvatar(
                           radius: 40,
                           backgroundColor:
-                          Theme.of(context).primaryColor.withOpacity(0.1),
+                              Theme.of(context).primaryColor.withOpacity(0.1),
                           backgroundImage:
-                          user.photoUrl != null && user.photoUrl!.isNotEmpty
-                              ? CachedNetworkImageProvider(user.photoUrl!)
-                          as ImageProvider
-                              : null,
+                              user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                  ? CachedNetworkImageProvider(user.photoUrl!)
+                                      as ImageProvider
+                                  : null,
                           child: user.photoUrl == null
                               ? Text(
-                            user.name[0].toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          )
+                                  user.name[0].toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                )
                               : null,
                         ),
                       ),
@@ -2655,7 +2660,7 @@ class MessagesTab extends StatelessWidget {
 
             final chats = snapshot.data!.docs.where((chat) {
               final participants =
-              List<String>.from(chat.data()['participants'] ?? []);
+                  List<String>.from(chat.data()['participants'] ?? []);
               final otherUserId = participants
                   .firstWhere((id) => id != currentUser.uid, orElse: () => '');
               // Only show chats with friends
@@ -2700,9 +2705,9 @@ class MessagesTab extends StatelessWidget {
               itemBuilder: (context, index) {
                 final chat = chats[index];
                 final participants =
-                List<String>.from(chat.data()['participants'] ?? []);
+                    List<String>.from(chat.data()['participants'] ?? []);
                 final otherUserId = participants.firstWhere(
-                        (id) => id != currentUser.uid,
+                    (id) => id != currentUser.uid,
                     orElse: () => '');
 
                 if (otherUserId.isEmpty) {
@@ -2721,10 +2726,10 @@ class MessagesTab extends StatelessWidget {
                     }
 
                     final otherUser =
-                    UserModel.fromDocumentSnapshot(userSnapshot.data!);
+                        UserModel.fromDocumentSnapshot(userSnapshot.data!);
                     final lastMessage = chat.data()['lastMessage'] as String?;
                     final lastMessageTime =
-                    chat.data()['lastMessageTime'] as Timestamp?;
+                        chat.data()['lastMessageTime'] as Timestamp?;
                     final unreadCount =
                         chat.data()['unreadCount${currentUser.uid}'] as int? ??
                             0;
@@ -2742,22 +2747,22 @@ class MessagesTab extends StatelessWidget {
                           child: CircleAvatar(
                             radius: 28,
                             backgroundColor:
-                            Theme.of(context).primaryColor.withOpacity(0.1),
+                                Theme.of(context).primaryColor.withOpacity(0.1),
                             backgroundImage: otherUser.photoUrl != null &&
-                                otherUser.photoUrl!.isNotEmpty
+                                    otherUser.photoUrl!.isNotEmpty
                                 ? CachedNetworkImageProvider(
-                                otherUser.photoUrl!) as ImageProvider
+                                    otherUser.photoUrl!) as ImageProvider
                                 : null,
                             child: otherUser.photoUrl == null ||
-                                otherUser.photoUrl!.isEmpty
+                                    otherUser.photoUrl!.isEmpty
                                 ? Text(
-                              otherUser.name[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            )
+                                    otherUser.name[0].toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  )
                                 : null,
                           ),
                         ),
@@ -2770,18 +2775,18 @@ class MessagesTab extends StatelessWidget {
                         ),
                         subtitle: lastMessage != null
                             ? Text(
-                          lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: unreadCount > 0
-                                ? Colors.black87
-                                : Colors.grey[600],
-                            fontWeight: unreadCount > 0
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                          ),
-                        )
+                                lastMessage,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: unreadCount > 0
+                                      ? Colors.black87
+                                      : Colors.grey[600],
+                                  fontWeight: unreadCount > 0
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                                ),
+                              )
                             : null,
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -2847,141 +2852,6 @@ class MessagesTab extends StatelessWidget {
     } else {
       return 'Just now';
     }
-  }
-}
-
-class ProfileTab extends StatelessWidget {
-  const ProfileTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final authService = AuthService();
-    final user = authService.currentUser;
-
-    if (user == null) {
-      return const Center(child: Text('Not logged in'));
-    }
-
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final userData = UserModel.fromDocumentSnapshot(snapshot.data!);
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 64,
-                    backgroundImage: userData.photoUrl != null &&
-                        userData.photoUrl!.isNotEmpty
-                        ? CachedNetworkImageProvider(userData.photoUrl!)
-                    as ImageProvider
-                        : null,
-                    child:
-                    userData.photoUrl == null || userData.photoUrl!.isEmpty
-                        ? Text(
-                      userData.name[0].toUpperCase(),
-                      style: const TextStyle(fontSize: 48),
-                    )
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: CircleAvatar(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.white),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditProfileScreen(
-                                user: userData,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                userData.name,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                userData.profession,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                ),
-              ),
-              if (userData.bio != null && userData.bio!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  userData.bio!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-              if (userData.location != null) ...[
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Text(
-                      LocationService.getLocationDescription(
-                          userData.location!),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditProfileScreen(user: userData),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.edit),
-                label: const Text('Edit Profile'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 }
 
