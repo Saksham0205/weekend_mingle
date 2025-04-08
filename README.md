@@ -4,13 +4,14 @@ Mingle is a modern Flutter application that combines professional networking wit
 
 ## Features
 
-- User authentication with email/password and Google Sign-in
-- Professional profile creation and management
-- Browse and discover other professionals
-- Real-time messaging (coming soon)
-- Location-based matching
-- Interest-based connections
-- Modern and intuitive UI design
+- **User Authentication**: Secure login with email/password and Google Sign-in using Firebase Authentication
+- **Profile Management**: Create and edit professional profiles with photos, bio, and interests
+- **Discovery**: Browse and connect with professionals based on location, interests, and compatibility
+- **Messaging**: Real-time chat functionality (coming in next release)
+- **Matching**: Smart algorithms for location-based and interest-based connections
+- **UI/UX**: Modern, responsive design with intuitive navigation
+- **Social Features**: Post updates, share stories, and join weekend activities
+- **Privacy Controls**: Granular settings to manage visibility and connections
 
 ## Getting Started
 
@@ -25,7 +26,7 @@ Mingle is a modern Flutter application that combines professional networking wit
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/mingle.git
+git clone https://github.com/Saksham0205/weekend_mingle.git
 cd mingle
 ```
 
@@ -75,8 +76,4 @@ lib/
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
 
-- Flutter team for the amazing framework
-- Firebase for the backend services
-- All contributors who help to make Mingle better
